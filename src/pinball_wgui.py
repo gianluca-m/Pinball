@@ -23,6 +23,9 @@ window = tk.Tk()
 c = tk.Canvas(window,bg="black",width=cWidth,height=cHeight)
 c.pack()
 
+left_flip = False
+right_flip = False
+
 
 
 # utility function
@@ -67,18 +70,20 @@ class Flipper:
         self.max_rotation = abs(max_rotation)
         self.sign = math.copysign(1, max_rotation)
         self.angular_vel = angular_vel
-        
+        #dynamic
         self.rotation = 0.0
         self.current_angular_vel = 0.0
         self.touch_id = -1
 
     
-    def simulate(self, dt):
+    def simulate(self, dt, pressed):
+        #global left_flip
         prev_rotation = self.rotation
-        pressed = self.touch_id >= 0
+        #pressed = left_flip
         
         if (pressed):
-            self.rotation = min(self.rotation + dt * self.angular_vel, self.max_rotation)
+            self.rotation = 40 + min(self.rotation + dt * self.angular_vel, self.max_rotation-40)
+            #left_flip = False
         else:
             self.rotation = max(self.rotation - dt * self.angular_vel, 0.0)
         
@@ -88,12 +93,6 @@ class Flipper:
     def select(self, pos):
         dist = self.pos - pos
         return vector_length(dist) - vector_length(self.length)
-
-    def get_tip(self):
-        angle = self.rest_angle + self.sign * self.rotation
-        dir = np.array([[math.cos(angle)], [math.sin(angle)]])
-        tip = np.copy(self.pos) + dir * self.length
-        return tip    
 
 
 
@@ -106,7 +105,7 @@ class CircleObstacle:
 
 
 class PhysicsScene:
-    def __init__(self, border, balls, obstacles, flippers, g=-9.81, dt=1/60):
+    def __init__(self, border, balls, obstacles, flippers, g=-9.81, dt=1/45):
         self.border = border
         self.balls = balls
         self.obstacles = obstacles
@@ -130,7 +129,30 @@ def setup_canvas():
      #Function that runs the window + event listener
     pass
 
+def flipper_angle(f,angle):
+    #Rotation: Translate Middle to the Origin, do simple rotation, translate back
+    #Clockwise 45 degrees = r = np.array(((np.cos(theta),-np.sin(theta)),(np.sin(theta),np.cos(theta))))
+    theta = np.radians(angle)
+    r = np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
+    trans_x = f.pos[5][0]
+    trans_y = f.pos[5][1]
 
+    c = np.copy(f.pos)
+    # rotation
+    for i in c:
+        #NP Array of 2D Vect
+        #Translate to Origin
+        i[0] = i[0] - trans_x
+        i[1] = i[1] - trans_y
+        tmpx = i[0]
+        tmpy = i[1]
+
+        i[0] = np.cos(theta) * tmpx + (-np.sin(theta)) * tmpy
+        i[1] = np.sin(theta) * tmpx + np.cos(theta) * tmpy
+            
+        i[0] = i[0] + trans_x
+        i[1] = i[1] + trans_y
+    return c
 def setup_scene() -> PhysicsScene:
     #scene borders --> Define set of pixel pairs
     #border = [0.0,0.0, 0.0,800, 300,1100, 300,1200, 500,1200, 500,1100, 800,800, 800,0.0]
@@ -158,18 +180,18 @@ def setup_scene() -> PhysicsScene:
     obstacles.append(CircleObstacle(np.array([0.2, 1.2]), 0.1, 2.0))
 
     # flippers
-    radius = 25
-    length = 100
-    max_rotation = 1.0
-    rest_angle = 0.5
-    angular_vel = 10.0
-    restitution = 0.0
+    radius = 12
+    length = 50
+    max_rotation = -80
+    rest_angle = 40
+    angular_vel = 200
+    restitution = 1.0
     x1 = cWidth * 0.2 # 300
     y1 = cHeight * 0.9 # 1100
     x2 = cWidth * 0.8 # 500
     y2 = cHeight * 0.9 # 1100
     flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel)
-    flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, rest_angle, max_rotation, angular_vel)
+    flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel)
     flippers = [flipper1, flipper2]
 
     physics_scene = PhysicsScene(border, balls, obstacles, flippers)
@@ -197,33 +219,12 @@ def draw(physics_scene):
   
     #Draw the flippers
     for f in physics_scene.flippers:
-
-        #Rotation: Translate Middle to the Origin, do simple rotation, translate back
-        #Clockwise 45 degrees = r = np.array(((np.cos(theta),-np.sin(theta)),(np.sin(theta),np.cos(theta))))
-        theta = np.radians(45)
-        r = np.array([[np.cos(theta),-np.sin(theta)],[np.sin(theta),np.cos(theta)]])
-        trans_x = (f.pos[4][0] + f.pos[3][0]) / 2.0
-        trans_y = (f.pos[4][1] + f.pos[1][1]) / 2.0
-
-        # rotation
-        for i in f.pos:
-            #NP Array of 2D Vect
-            #Translate to Origin
-            i[0] = i[0] - trans_x
-            i[1] = i[1] - trans_y
-            tmpx = i[0]
-            tmpy = i[1]
-
-            i[0] = np.cos(theta) * tmpx + (-np.sin(theta)) * tmpy
-            i[1] = np.sin(theta) * tmpx + np.cos(theta) * tmpy
-            
-            i[0] = i[0] + trans_x
-            i[1] = i[1] + trans_y
-
-        coords = f.pos.flatten().tolist()
+        print(f.rest_angle + f.rotation*f.sign)
+        new_coords = flipper_angle(f,f.rest_angle + f.rotation * f.sign)
+        coords = new_coords.flatten().tolist()
         c.create_polygon(coords, fill = "red")
-        draw_disc(coords[4], coords[5], f.radius-5,"red")
-        draw_disc(coords[10], coords[11],f.radius-5,"red")
+        draw_disc(coords[4], coords[5], f.radius,"red")
+        draw_disc(coords[10], coords[11],f.radius,"red")
 
     c.update()
 
@@ -256,7 +257,6 @@ def handle_ball_ball_collision(ball1: Ball, ball2: Ball):
 
 
 def handle_ball_circle_obstacle_collision(ball: Ball, obstacle: CircleObstacle):
-    global physics_scene
     dir = ball.pos - obstacle.pos
     dist = vector_length(dir)
     if (dist == 0.0 or dist > ball.radius + obstacle.radius):
@@ -274,13 +274,16 @@ def handle_ball_circle_obstacle_collision(ball: Ball, obstacle: CircleObstacle):
 
 def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
     #Bug Call
-    #closest = closest_point_on_segment(ball.pos, flipper.pos, flipper.get_tip())
-    closest = 0.0
+    closest = closest_point_on_segment(ball.pos, flipper.pos[5], flipper.pos[2])
+    
     dir = ball.pos - closest
     dist = vector_length(dir)
     if (dist == 0.0 or dist > ball.radius + flipper.radius):
         # no collision
+        #print("No-Collision")
         return
+    
+    #print("Collision with Flipper!")
 
     dir *= (1.0 / dist)     # normalize (?)
     corr = ball.radius + flipper.radius - dist
@@ -288,7 +291,7 @@ def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
 
     # update velocity
     radius = np.copy(closest)
-    radius += dir * flipper.radius
+    radius += (dir * flipper.radius)
     radius -= flipper.pos
     surface_vel = np.array([-radius[1], radius[0]])
     surface_vel *= flipper.current_angular_vel
@@ -341,11 +344,21 @@ def handle_ball_border_collision(ball: Ball, border):
     new_v = abs(v) * ball.restitution
     ball.vel += d * (new_v - v)
 
+def set_left_flip(event):
+    global left_flip
+    left_flip = True
+
+def set_right_flip(event):
+    global right_flip
+    right_flip = True
 
 def simulate(physics_scene: PhysicsScene):
     draw(physics_scene)
-    for flipper in physics_scene.flippers:
-        flipper.simulate(physics_scene.dt)
+    global left_flip
+    global right_flip
+    
+    physics_scene.flippers[0].simulate(physics_scene.dt, left_flip)
+    physics_scene.flippers[1].simulate(physics_scene.dt, right_flip)
 
     for i in range(len(physics_scene.balls)):
         ball = physics_scene.balls[i]
@@ -359,8 +372,8 @@ def simulate(physics_scene: PhysicsScene):
         for j in range(len(physics_scene.obstacles)):
             handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[j])
         
-        #for j in range(len(physics_scene.flippers)):
-        #    handle_ball_flipper_collision(ball, physics_scene.flippers[j])
+        for j in range(len(physics_scene.flippers)):
+            handle_ball_flipper_collision(ball, physics_scene.flippers[j])
 
         handle_ball_border_collision(ball, physics_scene.border)
 
@@ -369,11 +382,14 @@ def simulate(physics_scene: PhysicsScene):
 
     
 def update(physics_scene: PhysicsScene):
+    global left_flip
+    global right_flip
     draw(physics_scene)
     while True:
         simulate(physics_scene)
+        left_flip = False
+        right_flip = False
         time.sleep(physics_scene.dt)
-
         
 def main():
     setup_canvas()
@@ -381,6 +397,8 @@ def main():
     #update(physics_scene)
     draw(physics_scene)
 
+window.bind('<KeyPress-a>', set_left_flip)
+window.bind('<KeyPress-d>', set_right_flip)
 
 start_button = tk.Button(window, text='START', font=('arial bold', 18), height=10, width=10,
     bg="black", fg="white", activebackground="green", relief="raised", command=lambda:update(setup_scene()))
