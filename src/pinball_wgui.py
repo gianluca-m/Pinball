@@ -14,8 +14,8 @@ import time
     TODO: add GUI stuff
 '''
 
-cWidth = 400
-cHeight = 600
+cWidth = 600
+cHeight = 900
 flipperHeight = 1.7
 cScale = cHeight / flipperHeight
 simWidth = cWidth / cScale
@@ -93,7 +93,6 @@ class Flipper:
         
         self.current_angular_vel = self.sign * (self.rotation - prev_rotation) / dt
 
-
     def select(self, pos):
         dist = self.pos - pos
         return vector_length(dist) - vector_length(self.length)
@@ -160,9 +159,9 @@ def setup_scene() -> PhysicsScene:
     #border = [0.0,0.0, 0.0,800, 300,1100, 300,1200, 500,1200, 500,1100, 800,800, 800,0.0]
     #border = [x/2 for x in border]
     #border = np.array([[0.0, 0.0], [cWidth, 0.0], [cWidth, cHeight], [0.0, cHeight]])
-    border = np.array([[0.0, cHeight / cScale], [0.0, 0.0], [cWidth / cScale, 0.0], [cWidth / cScale, cHeight / cScale]])
+    #border = np.array([[0.0, cHeight / cScale], [0.0, 0.0], [cWidth / cScale, 0.0], [cWidth / cScale, cHeight / cScale]])
     # top-left, bottom-left, bottom-right, top-right
-    border = np.array([[0.0, 0.0], [0.0, cHeight], [cWidth, cHeight], [cWidth, 0.0]])
+    border = np.array([[0.0, 0.0],[0.0,cHeight*0.7], [cWidth*0.3,cHeight*0.9],[cWidth*0.3,cHeight],[cWidth*0.7,cHeight],[cWidth*0.7,cHeight*0.9], [cWidth, cHeight*0.7], [cWidth, 0.0]])
      
     '''
         the problem with the ball-border collision is that we use different coordiante systems for the border and balls
@@ -180,29 +179,29 @@ def setup_scene() -> PhysicsScene:
     vel1 = np.array([-1.2, 3.5])
     ball1 = Ball(pos1, vel1, radius, mass,restitution)
 
-    pos2 = np.array([cWidth * 0.21, cHeight * 0.8])
+    pos2 = np.array([cWidth * 0.21, cHeight * 0.1])
     vel2 = np.array([0.0, 0.0])
     ball2 = Ball(pos2, vel2, radius, mass,restitution)
     balls = [ball2] #[ball1, ball2]
 
     # obstacles
     obstacles = []
-    obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.6 * cHeight]), 30, 2.0))
-    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.5 * cHeight]), 50, 2.0))
-    obstacles.append(CircleObstacle(np.array([0.4 * cWidth, 0.7 * cHeight]), 45, 2.0))
-    obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.4 * cHeight]), 20, 2.0))
+    obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.2 * cHeight]), 70, 2.0))
+    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 2.0))
+    obstacles.append(CircleObstacle(np.array([0.6 * cWidth, 0.7 * cHeight]), 40, 2.0))
+    obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 2.0))
 
     # flippers
     radius = 12
-    length = 50
+    length = 60
     max_rotation = -80
-    rest_angle = 40
+    rest_angle = 30
     angular_vel = 200
     restitution = 1.0
-    x1 = cWidth * 0.2 # 300
-    y1 = cHeight * 0.9 # 1100
-    x2 = cWidth * 0.8 # 500
-    y2 = cHeight * 0.9 # 1100
+    x1 = cWidth * 0.3 
+    y1 = cHeight * 0.9 
+    x2 = cWidth * 0.7 
+    y2 = cHeight * 0.9 
     flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, window, 'a')
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, window, 'd')
     flippers = [flipper1, flipper2]
@@ -295,7 +294,7 @@ def handle_ball_circle_obstacle_collision(ball: Ball, obstacle: CircleObstacle):
 def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
     #Bug Call
     rotated = flipper.rotate(flipper.rest_angle + flipper.rotation * flipper.sign)
-    closest = closest_point_on_segment(ball.pos, rotated[2], rotated[5])
+    closest = closest_point_on_segment(ball.pos, rotated[5], rotated[2])
 
     dir = ball.pos - closest
     dist = vector_length(dir)
@@ -324,8 +323,6 @@ def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
 
 def handle_ball_border_collision(ball: Ball, border):
     len_border = len(border)
-    if (len_border < 3):
-        return
 
     # find closest segment
     min_dist = 0.0
@@ -337,24 +334,16 @@ def handle_ball_border_collision(ball: Ball, border):
         b = border[(i+1) % len_border]
         c = closest_point_on_segment(ball.pos, a, b)
         d = ball.pos - c
-        print(f"pos:\t{ball.pos}")
-        print(f"a:\t{a}")
-        print(f"b:\t{b}")
-        print(f"c:\t{c}")
-        print(f"d:\t{d}")
         dist = vector_length(d)
-        print(f"dist:\t{dist}")
         if (i == 0 or dist < min_dist):
             min_dist = dist
             closest = c
             ab = b - a
-            normal = np.array([ab[1], ab[0]])
-            print(f"normal: {normal}")
-        print("-----------")
+            normal = np.array([-ab[1], ab[0]])  #This is the left-normal
+                                                #We need it because we build the Polygonal
+                                                #From Counter-Clockwise
+                                                #This is the normal "Inside" the Pinball game
 
-    print("==========================================")
-
-    # push out
     d = ball.pos - closest
     dist = vector_length(d)
     if (dist == 0.0):
@@ -364,15 +353,14 @@ def handle_ball_border_collision(ball: Ball, border):
 
     if (dist > ball.radius):
         return
-
-    '''if (d.dot(normal) >= 0.0):
+    '''
+    if (d.dot(normal) >= 0.0):
         if (dist > ball.radius):
-            # no collision
             return
         ball.pos += d * (ball.radius - dist)
     else:
-        ball.pos += d * -(dist + ball.radius)'''
-
+        ball.pos += d * -(dist + ball.radius)
+    '''
     # update velocity
     v = ball.vel.dot(d)
     new_v = abs(v) * ball.restitution
@@ -387,6 +375,24 @@ def simulate(physics_scene: PhysicsScene):
 
     for i in range(len(physics_scene.balls)):
         ball = physics_scene.balls[i]
+        
+        #BROAD PHASE COLLISION DETECTION
+        if(ball.pos[0] > cWidth/2):
+            if(ball.pos[1] > cHeight /2):
+                #BOTTOM RIGHT
+                handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[2])
+                handle_ball_flipper_collision(ball, physics_scene.flippers[1])
+            else: 
+                #TOP RIGHT
+                handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[1])
+        else:
+            if(ball.pos[1] > cHeight/2):
+                #BOTTOM LEFT
+                handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[3])
+                handle_ball_flipper_collision(ball, physics_scene.flippers[0])
+            else:
+                #TOP LEFT
+                handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[0])
 
         # if more than 2 balls, this needs to be done differently
         #   for j = 0, j < len(balls), j++
@@ -394,12 +400,13 @@ def simulate(physics_scene: PhysicsScene):
         for j in range(i+1, len(physics_scene.balls)):
             handle_ball_ball_collision(ball, physics_scene.balls[j])
 
+        '''
         for j in range(len(physics_scene.obstacles)):
             handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[j])
         
         for j in range(len(physics_scene.flippers)):
             handle_ball_flipper_collision(ball, physics_scene.flippers[j])
-
+        '''
         handle_ball_border_collision(ball, physics_scene.border)
 
     for ball in physics_scene.balls:
@@ -411,10 +418,6 @@ def update(physics_scene: PhysicsScene):
     while True:
         simulate(physics_scene)
         time.sleep(physics_scene.dt)
-
-        if physics_scene.balls[0].pos[1] < -0.1:
-            break
-
 
 def main():
     physics_scene = setup_scene()    
