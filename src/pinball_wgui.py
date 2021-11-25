@@ -193,10 +193,10 @@ def setup_scene() -> PhysicsScene:
 
     # flippers
     radius = 12
-    length = 60
+    length = 90
     max_rotation = -80
     rest_angle = 30
-    angular_vel = 200
+    angular_vel = 700
     restitution = 1.0
     x1 = cWidth * 0.3 
     y1 = cHeight * 0.9 
@@ -314,7 +314,7 @@ def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
     radius += (dir * flipper.radius)
     radius -= flipper.pos[5]
     surface_vel = np.array([-radius[1], radius[0]])
-    surface_vel *= flipper.current_angular_vel
+    surface_vel *= flipper.current_angular_vel/35
 
     v = ball.vel.dot(dir)
     new_v = surface_vel.dot(dir)
