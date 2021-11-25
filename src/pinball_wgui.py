@@ -188,7 +188,7 @@ def setup_scene() -> PhysicsScene:
     obstacles = []
     obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.2 * cHeight]), 70, 2.0))
     obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 2.0))
-    obstacles.append(CircleObstacle(np.array([0.6 * cWidth, 0.7 * cHeight]), 40, 2.0))
+    obstacles.append(CircleObstacle(np.array([0.65 * cWidth, 0.7 * cHeight]), 40, 2.0))
     obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 2.0))
 
     # flippers
@@ -329,9 +329,9 @@ def handle_ball_border_collision(ball: Ball, border):
     closest = np.array([])
     normal = np.array([])
 
-    for i in range(len_border):
+    for i in range(len_border-1):
         a = border[i]
-        b = border[(i+1) % len_border]
+        b = border[(i+1)]
         c = closest_point_on_segment(ball.pos, a, b)
         d = ball.pos - c
         dist = vector_length(d)
@@ -353,14 +353,13 @@ def handle_ball_border_collision(ball: Ball, border):
 
     if (dist > ball.radius):
         return
-    '''
-    if (d.dot(normal) >= 0.0):
-        if (dist > ball.radius):
-            return
-        ball.pos += d * (ball.radius - dist)
+    
+    corr = ball.radius - dist
+    if (d.dot(normal) >= 0.0): 
+        ball.pos -= d * corr
     else:
-        ball.pos += d * -(dist + ball.radius)
-    '''
+        ball.pos += d * corr
+    
     # update velocity
     v = ball.vel.dot(d)
     new_v = abs(v) * ball.restitution
@@ -382,17 +381,21 @@ def simulate(physics_scene: PhysicsScene):
                 #BOTTOM RIGHT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[2])
                 handle_ball_flipper_collision(ball, physics_scene.flippers[1])
+                handle_ball_border_collision(ball, physics_scene.border[3:8])
             else: 
                 #TOP RIGHT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[1])
+                handle_ball_border_collision(ball, physics_scene.border[[6,7,0]])
         else:
             if(ball.pos[1] > cHeight/2):
                 #BOTTOM LEFT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[3])
                 handle_ball_flipper_collision(ball, physics_scene.flippers[0])
+                handle_ball_border_collision(ball, physics_scene.border[:5])
             else:
                 #TOP LEFT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[0])
+                handle_ball_border_collision(ball, physics_scene.border[[7,0,1]])
 
         # if more than 2 balls, this needs to be done differently
         #   for j = 0, j < len(balls), j++
