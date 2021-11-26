@@ -15,6 +15,7 @@ cHeight = 900
 cWidth = int(3 / 5 * cHeight)
 
 window = tk.Tk()
+window.wm_title("Pinball")
 canvas = tk.Canvas(window, bg="white", width=cWidth, height=cHeight)
 canvas.pack()
 
@@ -194,18 +195,18 @@ def draw(physics_scene):
     # TODO: maybe use "move" method for certain objects instead of redrawing (?)
     canvas.delete("all")
     
-    #Draw Frame around GUI:
-    canvas.create_polygon(physics_scene.border.flatten().tolist(),outline="black",fill="white")
+    # Draw Frame around GUI:
+    canvas.create_polygon(physics_scene.border.flatten().tolist(), outline="black", fill="white")
 
-    #Draw the balls:
+    # Draw the balls:
     for b in physics_scene.balls:
         draw_disc(b.pos[0], b.pos[1], b.radius, "green")
 
-    #Draw the obstacles:
+    # Draw the obstacles:
     for o in physics_scene.obstacles:
         draw_disc(o.pos[0], o.pos[1], o.radius, "blue")
   
-    #Draw the flippers
+    # Draw the flippers
     for f in physics_scene.flippers:
         new_coords = f.rotate(f.rest_angle + f.rotation * f.sign)
         coords = new_coords.flatten().tolist()
@@ -286,14 +287,12 @@ def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
 
 
 def handle_ball_border_collision(ball: Ball, border):
-    len_border = len(border)
-
     # find closest segment
     min_dist = 0.0
     closest = np.array([])
     normal = np.array([])
 
-    for i in range(len_border - 1):
+    for i in range(len(border) - 1):
         a = border[i]
         b = border[(i+1)]
         c = closest_point_on_segment(ball.pos, a, b)
@@ -381,6 +380,7 @@ start_button = tk.Button(window, text='START', font=('arial bold', 18), height=2
     bg="black", fg="white", activebackground="green", relief="raised", command=lambda:(update(setup_scene())))
 start_button.pack(side=tk.BOTTOM, anchor=tk.S)
 
+window.protocol("WM_DELETE_WINDOW", window.destroy)     # properly close tkinter window when pressing X button, so we don't get all the exception messages
 
 if __name__ == "__main__":
     main()
