@@ -21,7 +21,7 @@ cScale = cHeight / flipperHeight
 simWidth = cWidth / cScale
 simHeight = cHeight / cScale
 window = tk.Tk()
-canvas = tk.Canvas(window, bg="black", width=cWidth, height=cHeight)
+canvas = tk.Canvas(window, bg="white", width=cWidth, height=cHeight)
 canvas.pack()
 
 # utility functions
@@ -175,14 +175,14 @@ def setup_scene() -> PhysicsScene:
     radius = 10
     mass = math.pi * radius**2
     restitution = 1.0
-    pos1 = np.array([1, 0.5])
+    pos1 = np.array([cWidth*0.1, cHeight*0.7])
     vel1 = np.array([-1.2, 3.5])
     ball1 = Ball(pos1, vel1, radius, mass,restitution)
 
     pos2 = np.array([cWidth * 0.21, cHeight * 0.1])
     vel2 = np.array([0.0, 0.0])
     ball2 = Ball(pos2, vel2, radius, mass,restitution)
-    balls = [ball2] #[ball1, ball2]
+    balls = [ball1, ball2]
 
     # obstacles
     obstacles = []
@@ -328,6 +328,8 @@ def handle_ball_border_collision(ball: Ball, border):
     min_dist = 0.0
     closest = np.array([])
     normal = np.array([])
+    checker = np.array([])
+    diff = np.array([])
 
     for i in range(len_border-1):
         a = border[i]
@@ -339,6 +341,8 @@ def handle_ball_border_collision(ball: Ball, border):
             min_dist = dist
             closest = c
             ab = b - a
+            diff = b-a
+            checker = ball.pos-a
             normal = np.array([-ab[1], ab[0]])  #This is the left-normal
                                                 #We need it because we build the Polygonal
                                                 #From Counter-Clockwise
@@ -351,14 +355,22 @@ def handle_ball_border_collision(ball: Ball, border):
         dist = vector_length(normal)
     d *= (1.0 / dist)       # normalize (?)
 
-    if (dist > ball.radius):
-        return
-    
+    isLeft = (diff[0]*checker[1] - diff[1]*checker[0]) < 0
+
     corr = ball.radius - dist
-    if (d.dot(normal) >= 0.0): 
-        ball.pos -= d * corr
+    if(isLeft):
+        if (dist > ball.radius):
+            return
+        if (d.dot(normal) >= 0.0):
+            #print("Correction made by neg dir")
+            ball.pos -= d * corr
+        else:
+            #print("Correction made by plus dir")
+            ball.pos += d * corr
     else:
-        ball.pos += d * corr
+        print("BAD INSTANCE: OUT OF POLYGON")
+        #We got out of the Polygon
+        ball.pos -= (d * (dist + ball.radius))
     
     # update velocity
     v = ball.vel.dot(d)
