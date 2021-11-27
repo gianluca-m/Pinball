@@ -16,8 +16,9 @@ cWidth = int(3 / 5 * cHeight)
 
 window = tk.Tk()
 window.wm_title("Pinball")
-canvas = tk.Canvas(window, bg="white", width=cWidth, height=cHeight)
+canvas = tk.Canvas(window, bg="black", width=cWidth, height=cHeight)
 canvas.pack()
+
 
 # utility functions
 def vector_length(x):
@@ -125,13 +126,42 @@ class CircleObstacle:
         self.radius = radius
         self.push_vel = push_vel
 
+class Shooter:
+    def __init__(self, pos, rest_pos, k, mass, button):
+        self.pos = np.copy(pos)
+        self.rest_pos = np.copy(rest_pos)
+        self.k = k
+        self.mass = mass
+        self.push_vel = 0.0
+        self.is_pressed = False
+
+        window.bind(f'<KeyPress-{button}>', self.activate)
+        window.bind(f'<KeyRelease-{button}>', self.deactivate)
+
+    def simulate(self,dt):
+        if (self.is_pressed):
+            self.pos[0][1] = max(self.pos[0][1] + 1, self.rest_pos[1])
+            #F = -kx
+            force = -self.k * (self.rest_pos[1]-self.pos[0][1])
+            #F = m*a --> a = F/m
+            a = force / self.mass
+            self.push_vel = a * dt
+        else:
+            self.pos[0][1] = self.rest_pos[1]
+
+    def activate(self,event):
+        self.is_pressed = True
+
+    def deactivate(self,event):
+        self.is_pressed = False
 
 
 class PhysicsScene:
-    def __init__(self, border, balls, obstacles, flippers, g=np.array([0, 981]), dt=1/120):
+    def __init__(self, border, balls, obstacles, shooters, flippers, g=np.array([0, 981]), dt=1/120):
         self.border = border
         self.balls = balls
         self.obstacles = obstacles
+        self.shooters = shooters
         self.flippers = flippers
         self.g = g
         self.dt = dt
@@ -143,7 +173,7 @@ class PhysicsScene:
 def setup_scene() -> PhysicsScene:
     global window
     #scene borders --> Define set of pixel pairs
-    border = np.array([[0.0, 0.0], [0.0,cHeight*0.7], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth, cHeight*0.7], [cWidth, 0.0]])
+    border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight],[cWidth,cHeight],[cWidth,60],[cWidth-60,0.0]])
 
     # balls
     radius = 10
@@ -153,8 +183,8 @@ def setup_scene() -> PhysicsScene:
     vel1 = np.array([-1500.0, 0.0])
     ball1 = Ball(pos1, vel1, radius, mass,restitution)
 
-    pos2 = np.array([cWidth * 0.8, cHeight * 0.6])
-    vel2 = np.array([0.0, 0.0])
+    pos2 = np.array([cWidth * 0.98, cHeight * 0.90])
+    vel2 = np.array([0.0, -1000.0])
     ball2 = Ball(pos2, vel2, radius, mass,restitution)
     balls = [ball1, ball2]
 
@@ -164,6 +194,12 @@ def setup_scene() -> PhysicsScene:
     obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 200.0))
     obstacles.append(CircleObstacle(np.array([0.65 * cWidth, 0.7 * cHeight]), 40, 200.0))
     obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 200.0))
+
+    #shooters
+    shooters = []
+    fixed_pos = np.array([[cWidth-40,cHeight-60],[cWidth,cHeight]])
+    shooters.append(Shooter(fixed_pos,np.copy(fixed_pos[0]),2000,1,'k'))
+
 
     # flippers
     radius = int(cWidth * 0.02)
@@ -175,12 +211,12 @@ def setup_scene() -> PhysicsScene:
     x1 = cWidth * 0.3 
     y1 = cHeight * 0.9 
     x2 = cWidth * 0.7 
-    y2 = cHeight * 0.9 
+    y2 = cHeight * 0.9
     flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, window, 'a')
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, window, 'd')
     flippers = [flipper1, flipper2]
 
-    physics_scene = PhysicsScene(border, balls, obstacles, flippers)
+    physics_scene = PhysicsScene(border, balls, obstacles, shooters, flippers)
     return physics_scene
 
 
@@ -205,6 +241,10 @@ def draw(physics_scene):
     # Draw the obstacles:
     for o in physics_scene.obstacles:
         draw_disc(o.pos[0], o.pos[1], o.radius, "blue")
+
+    # Draw the Shooters:
+    for s in physics_scene.shooters:
+        canvas.create_rectangle(s.pos.flatten().tolist(), fill='red')
   
     # Draw the flippers
     for f in physics_scene.flippers:
@@ -258,6 +298,23 @@ def handle_ball_circle_obstacle_collision(ball: Ball, obstacle: CircleObstacle):
 
     vel = ball.vel.dot(dir)
     ball.vel += dir * (obstacle.push_vel - vel)
+
+def handle_ball_shooter_collision(ball: Ball, shooter: Shooter):
+    
+    if (ball.pos[1] + ball.radius < shooter.pos[0][1]):
+        # No Collision
+        return
+
+    ball.pos[1] = shooter.pos[0][1] - ball.radius
+
+    if(shooter.is_pressed):
+        #We are charging the Shooter so we dont launch (just bounce)
+        ball.vel[1] = 0.95 * (-ball.vel[1])
+        return
+
+    #Update Velocity in  normal state
+    ball.vel[1] = 0.6 * (-ball.vel[1])  - (shooter.push_vel)
+    print(ball.vel[1])
 
 
 def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
@@ -323,11 +380,13 @@ def handle_ball_border_collision(ball: Ball, border):
     # update velocity
     ball.vel -= 2 * (ball.vel.dot(unit_normal)) * unit_normal  # https://math.stackexchange.com/a/13266
     ball.vel *= 0.8     # multiply by constant so that ball loses some velocity when colliding with border, seems more natural to me
+    
 
 
 def simulate(physics_scene: PhysicsScene):    
     physics_scene.flippers[0].simulate(physics_scene.dt)
     physics_scene.flippers[1].simulate(physics_scene.dt)
+    physics_scene.shooters[0].simulate(physics_scene.dt)
 
     for ball in physics_scene.balls:
         ball.simulate(physics_scene.dt, physics_scene.g)
@@ -341,11 +400,14 @@ def simulate(physics_scene: PhysicsScene):
                 # BOTTOM RIGHT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[2])
                 handle_ball_flipper_collision(ball, physics_scene.flippers[1])
-                handle_ball_border_collision(ball, physics_scene.border[3:8])
+                handle_ball_border_collision(ball, physics_scene.border[3:10])
+                #Ball-Shooter Effect 
+                if(ball.pos[0] >= cWidth -50):
+                    handle_ball_shooter_collision(ball,physics_scene.shooters[0])
             else: 
                 # TOP RIGHT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[1])
-                handle_ball_border_collision(ball, physics_scene.border[[6, 7, 0]])
+                handle_ball_border_collision(ball, physics_scene.border[[7,8,9,10,0]])
         else:
             if (ball.pos[1] > cHeight / 2):
                 # BOTTOM LEFT
@@ -355,7 +417,7 @@ def simulate(physics_scene: PhysicsScene):
             else:
                 # TOP LEFT
                 handle_ball_circle_obstacle_collision(ball, physics_scene.obstacles[0])
-                handle_ball_border_collision(ball, physics_scene.border[[7, 0, 1]])
+                handle_ball_border_collision(ball, physics_scene.border[[10, 0, 1]])
 
         # if more than 2 balls, this needs to be done differently
         #   for j = 0, j < len(balls), j++
