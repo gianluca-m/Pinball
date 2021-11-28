@@ -18,11 +18,12 @@ canvas.pack()
 
 # utility functions
 def vector_length(x):
-    '''returns the length of a vector'''
+    '''Returns the length of a vector'''
     return np.sqrt(x.dot(x))    # faster than np.linalg.norm(x)
 
 
 def closest_point_on_segment(p, a, b):
+    '''Returns the closest point from point 'p' on the segment 'a' to 'b' '''
     ab = b - a
     t = ab.dot(ab)
 
@@ -35,6 +36,7 @@ def closest_point_on_segment(p, a, b):
 
 
 def angle_between_vectors(a, b):
+    '''Returns angle between vectors 'a' and 'b' in Rad'''
     unit_a = a / vector_length(a)
     unit_b = b / vector_length(b)
     return np.arccos(np.clip(unit_a.dot(unit_b), -1.0, 1.0))
@@ -106,8 +108,8 @@ class Flipper:
         c = np.copy(self.pos)
         # rotation
         for i in c:
-            #NP Array of 2D Vect
-            #Translate to Origin
+            # NP Array of 2D Vect
+            # Translate to Origin
             i[0] = i[0] - trans_x
             i[1] = i[1] - trans_y
             tmpx = i[0]
@@ -165,7 +167,7 @@ class Shooter:
 
 
 class PinballScene:
-    def __init__(self, border, balls, obstacles, shooters, flippers, g=np.array([0, 981]), dt=1/120):
+    def __init__(self, border, balls, obstacles, shooters, flippers, g=np.array([0, 981]), dt=1/60):
         self.border = border
         self.balls = balls
         self.obstacles = obstacles
@@ -206,8 +208,7 @@ class PinballScene:
         ball2.vel += dir * (new_v2 - v2)
 
 
-    @staticmethod
-    def handle_ball_circle_obstacle_collision(ball: Ball, obstacle: CircleObstacle):
+    def handle_ball_circle_obstacle_collision(self, ball: Ball, obstacle: CircleObstacle):
         dir = ball.pos - obstacle.pos
         dist = vector_length(dir)
         if (dist == 0.0 or dist > ball.radius + obstacle.radius):
@@ -222,6 +223,9 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (obstacle.push_vel - vel)
 
+        # update score
+        self.score += 1
+
 
     @staticmethod
     def handle_ball_shooter_collision(ball: Ball, shooter: Shooter):
@@ -232,11 +236,11 @@ class PinballScene:
         ball.pos[1] = shooter.pos[0][1] - ball.radius
 
         if(shooter.is_pressed):
-            #We are charging the Shooter so we dont launch (just bounce)
+            # We are charging the Shooter so we dont launch (just bounce)
             ball.vel[1] = 0.95 * (-ball.vel[1])
             return
 
-        #Update Velocity in  normal state
+        # Update Velocity in  normal state
         ball.vel[1] = 0.6 * (-ball.vel[1])  - (shooter.push_vel)
 
 
@@ -315,8 +319,7 @@ class PinballScene:
         # move ball so whole ball inside of canvas
         ball.pos = closest + unit_dir * ball.radius
         
-        #unit_normal = normal * (1.0 / vector_length(normal))        # normal vector with unit length
-        # update velocity   TODO: depending on which behaviour at corner is more realistic, use 'unit_normal' instead of 'unit_dir'
+        # update velocity
         ball.vel -= (2.0 - ball.restitution) * (ball.vel.dot(unit_dir)) * unit_dir  # https://math.stackexchange.com/a/13266
 
 
@@ -363,13 +366,13 @@ class PinballScene:
 
 def setup_scene() -> PinballScene:
     global window
-    #scene borders --> Define set of pixel pairs
+    # scene borders --> Define set of pixel pairs
     border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight], [cWidth,cHeight], [cWidth,60], [cWidth-60,0.0]])
 
     # balls
     radius = 10
     mass = math.pi * radius**2
-    restitution = 0.0
+    restitution = 0.2
     pos1 = np.array([cWidth * 0.25, cHeight * 0.05])
     vel1 = np.array([-1500.0, 0.0])
     ball1 = Ball(pos1, vel1, radius, mass, restitution)
@@ -386,11 +389,11 @@ def setup_scene() -> PinballScene:
     # obstacles
     obstacles = []
     obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.2 * cHeight]), 70, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.65 * cWidth, 0.7 * cHeight]), 40, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 200.0))
+    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 500.0))
+    obstacles.append(CircleObstacle(np.array([0.65 * cWidth, 0.7 * cHeight]), 40, 300.0))
+    obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 1000.0))
 
-    #shooters
+    # shooters
     shooters = []
     fixed_pos = np.array([[cWidth - 40, cHeight - 60], [cWidth, cHeight]])
     shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 2000, 1, 'k'))
@@ -418,7 +421,7 @@ def draw_disc(x, y, radius, col):
     canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=col, outline='')
 
 
-def draw(pinball_scene):
+def draw(pinball_scene: PinballScene):
     global canvas
     # if we don't delete all canvas objects, tkinter will keep all objects in memory and always create new ones when drawing another object
     # this will create performance issues and potentially out of memory issue
@@ -448,6 +451,9 @@ def draw(pinball_scene):
         draw_disc(coords[4], coords[5], f.radius, "red")
         draw_disc(coords[10], coords[11], f.radius, "red")
 
+    # Draw the score
+    canvas.create_text(cWidth * 0.5, cHeight * 0.1, text=f'Score: {pinball_scene.score}', fill='red', font=('arial bold', 18))
+
     canvas.update()
 
 
@@ -467,6 +473,7 @@ start_button = tk.Button(window, text='START', font=('arial bold', 18), height=2
     bg="black", fg="white", activebackground="green", relief="raised", command=lambda:(update(setup_scene())))
 start_button.pack(side=tk.BOTTOM, anchor=tk.S)
 
+# TODO: this doesn't quite work yet. It still shows exception messages when closing the window
 window.protocol("WM_DELETE_WINDOW", window.destroy)     # properly close tkinter window when pressing X button, so we don't get all the exception messages
 
 if __name__ == "__main__":
