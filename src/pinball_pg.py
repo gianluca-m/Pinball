@@ -177,6 +177,7 @@ class Shooter:
         self.is_pressed = False
 
 
+
 class PinballScene:
     def __init__(self, border, balls, obstacles, shooters, flippers, g=np.array([0, 981]), dt=1/60):
         self.border = border
@@ -240,19 +241,19 @@ class PinballScene:
 
     @staticmethod
     def handle_ball_shooter_collision(ball: Ball, shooter: Shooter):
-        if (ball.pos[1] + ball.radius < shooter.pos[0][1]):
+        if ball.pos[1] + ball.radius < shooter.pos[0][1]:
             # No Collision
             return
 
         ball.pos[1] = shooter.pos[0][1] - ball.radius
 
-        if(shooter.is_pressed):
+        if shooter.is_pressed:
             # We are charging the Shooter so we dont launch (just bounce)
-            ball.vel[1] = 0.95 * (-ball.vel[1])
+            ball.vel[1] = 0.95 * -ball.vel[1]
             return
 
         # Update Velocity in  normal state
-        ball.vel[1] = 0.6 * (-ball.vel[1])  - (shooter.push_vel)
+        ball.vel[1] = 0.6 * -ball.vel[1]  - shooter.push_vel
 
 
     @staticmethod
@@ -427,8 +428,8 @@ def setup_scene() -> PinballScene:
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, pygame.K_d)
     flippers = [flipper1, flipper2]
 
-    #Commit Changes on Statics-Surface to window
-    window.blit(statics,(0,0))
+    # Commit Changes on Statics-Surface to window
+    window.blit(statics, (0, 0))
 
     pinball_scene = PinballScene(border, balls, obstacles, shooters, flippers)
     return pinball_scene
@@ -456,13 +457,11 @@ def draw(pinball_scene: PinballScene):
         x2 = s.pos[1][0]
         y2 = s.pos[1][1]
         rect = pygame.Rect(x1, y1, x2, y2)
-
         pygame.draw.rect(dynamics, (255, 0, 0), rect, 0)
   
     # Draw the flippers
     for f in pinball_scene.flippers:
         new_coords = f.rotate(f.rest_angle + f.rotation * f.sign)
-
         pygame.draw.polygon(dynamics, (255, 0, 0), new_coords, 0)
         pygame.draw.circle(dynamics, (255, 0, 0), new_coords[2], f.radius, 0)
         pygame.draw.circle(dynamics, (255, 0, 0), new_coords[5], f.radius, 0)
