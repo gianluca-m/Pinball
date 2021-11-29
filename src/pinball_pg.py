@@ -11,12 +11,12 @@ pygame.init()
 cHeight = 900        
 cWidth = int(3 / 5 * cHeight)
 
-#Creates a Pygame window with title
-window = pygame.display.set_mode((cWidth+100,cHeight+200))
+#Creates a Pygame window with title. Size is a bit bigger for debug purposes
+window = pygame.display.set_mode((cWidth+50,cHeight+50))
 pygame.display.set_caption("Pinball")
-window.fill((0,0,0))
+window.fill((0,255,255))
 
-#Creates two Surfaces (Canvas). Dynamics has transparent background
+#Creates two Surfaces (Canvas). Statics has transparent background
 dynamics = pygame.Surface((cWidth,cHeight))
 dynamics.fill((255,255,255))
 
@@ -382,7 +382,7 @@ def setup_scene() -> PinballScene:
     global statics
     # scene borders --> Define set of pixel pairs
     border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight], [cWidth,cHeight], [cWidth,60], [cWidth-60,0.0]])
-    pygame.draw.polygon(statics,(0,0,0),border,1)
+    
     # balls
     radius = 10
     mass = math.pi * radius**2
@@ -430,79 +430,70 @@ def setup_scene() -> PinballScene:
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, window, 'd')
     flippers = [flipper1, flipper2]
 
-    
-
+    #Commit Changes on Statics-Surface to window
     window.blit(statics,(0,0))
+
     pinball_scene = PinballScene(border, balls, obstacles, shooters, flippers)
     return pinball_scene
-
-
-def draw_disc(x, y, radius, col):
-    canvas.create_oval(x - radius, y - radius, x + radius, y + radius, fill=col, outline='')
 
 
 def draw(pinball_scene: PinballScene):
     global window
     global dynamics
 
-    #Fills the Canvas with white and deletes all Objects
-    dynamics.fill((255,255,255))
+    #Fills the Dynamics Surface with black --> deletes all Objects
+    dynamics.fill((0,0,0))
     
-    # Draw Frame around GUI:
-    #canvas.create_polygon(pinball_scene.border.flatten().tolist(), outline="black", fill="white")
+    # Draw Polygon on Dynamics Surface: Color = White, Filled
+    pygame.draw.polygon(dynamics,(255,255,255),pinball_scene.border,0)
 
     # Draw the balls:
     for b in pinball_scene.balls:
         ball_ob = pygame.transform.scale(ball_img,(2*b.radius,2*b.radius))
-        
-        #rot_ball = pygame.transform.rotate(ball_ob, ang_vel)
-        dynamics.blit(ball_ob,(b.pos[0]-b.radius,b.pos[1]-b.radius))
-        #draw_disc(b.pos[0], b.pos[1], b.radius, "green")
+        dynamics.blit(ball_ob,(b.pos[0] - b.radius, b.pos[1] - b.radius))
 
-    # Draw the obstacles:
-    '''
-    for o in pinball_scene.obstacles:
-        draw_disc(o.pos[0], o.pos[1], o.radius, "blue")
-    '''
     # Draw the Shooters:
     for s in pinball_scene.shooters:
-        x1=s.pos[0][0]
-        y1=s.pos[0][1]
-        x2=s.pos[1][0]
-        y2=s.pos[1][1]
-        rect = pygame.Rect(x1,y1,x2-x1,y2-y1)
+        x1 = s.pos[0][0]
+        y1 = s.pos[0][1]
+        x2 = s.pos[1][0]
+        y2 = s.pos[1][1]
+        rect = pygame.Rect(x1, y1, x2-x1, y2-y1)
+
         pygame.draw.rect(dynamics,(255,0,0),rect,0)
-        #canvas.create_rectangle(s.pos.flatten().tolist(), fill='red')
   
     # Draw the flippers
     for f in pinball_scene.flippers:
         new_coords = f.rotate(f.rest_angle + f.rotation * f.sign)
-        #coords = new_coords.flatten().tolist()
+
         pygame.draw.polygon(dynamics,(255,0,0),new_coords,0)
-        #canvas.create_polygon(coords, fill = "red")
         pygame.draw.circle(dynamics,(255,0,0),new_coords[2],f.radius,0)
         pygame.draw.circle(dynamics,(255,0,0),new_coords[5],f.radius,0)
-        #draw_disc(coords[4], coords[5], f.radius, "red")
-        #draw_disc(coords[10], coords[11], f.radius, "red")
-
-    # Draw the score
+    
     '''
+    # Draw the score
     canvas.create_text(cWidth * 0.5, cHeight * 0.1, text=f'Score: {pinball_scene.score}', fill='red', font=('arial bold', 18))
     '''
+
     window.blit(dynamics,(0,0))
     window.blit(statics,(0,0))
     #canvas.update()
 
 
 def update(pinball_scene: PinballScene):
+
     while True:
         for event in pygame.event.get():
             if(event.type == pygame.QUIT):
                 pygame.quit()
                 quit()
+
         pinball_scene.simulate()
         draw(pinball_scene)
+
+        #flip() is the update function for the window
         pygame.display.flip()
+
         time.sleep(pinball_scene.dt)
 
 
