@@ -8,24 +8,28 @@ import pygame
     adjusted from: https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/04-pinball.html
 '''
 pygame.init()
+pygame.font.init()
 cHeight = 900        
 cWidth = int(3 / 5 * cHeight)
 
-#Creates a Pygame window with title. Size is a bit bigger for debug purposes
-window = pygame.display.set_mode((cWidth+50,cHeight+50))
+# Creates a Pygame window with title. Size is a bit bigger for debug purposes
+window = pygame.display.set_mode((cWidth + 50, cHeight + 50))
 pygame.display.set_caption("Pinball")
-window.fill((0,255,255))
+window.fill((0, 255, 255))
 
-#Creates two Surfaces (Canvas). Statics has transparent background
-dynamics = pygame.Surface((cWidth,cHeight))
-dynamics.fill((255,255,255))
+# Creates two Surfaces (Canvas). Statics has transparent background
+dynamics = pygame.Surface((cWidth, cHeight))
+dynamics.fill((255, 255, 255))
 
-statics = pygame.Surface((cWidth,cHeight),pygame.SRCALPHA, 32)
+statics = pygame.Surface((cWidth, cHeight), pygame.SRCALPHA, 32)
 statics.convert_alpha()
 
-#Load Ball Texture
+# Load Ball Texture
 ball_img = pygame.image.load("ball.png").convert()
-ball_img.set_colorkey((255,255,255))
+ball_img.set_colorkey((255, 255, 255))
+
+# Score Font
+scoreFont = pygame.font.SysFont('arial bold', 40)
 
 # utility functions
 def vector_length(x):
@@ -69,7 +73,7 @@ class Ball:
     
 
 class Flipper:
-    def __init__(self, pos, length, radius, rest_angle, max_rotation, angular_vel, window, button):
+    def __init__(self, pos, length, radius, rest_angle, max_rotation, angular_vel, key):
         self.pos = pos
         self.length = length
         self.radius = radius
@@ -81,11 +85,8 @@ class Flipper:
         self.rotation = 0.0
         self.current_angular_vel = 0.0
         self.is_pressed = False
+        self.key = key
 
-        '''
-        window.bind(f'<KeyPress-{button}>', self.activate)
-        window.bind(f'<KeyRelease-{button}>', self.deactivate)
-        '''
     
     def simulate(self, dt):
         prev_rotation = self.rotation
@@ -97,16 +98,17 @@ class Flipper:
         
         self.current_angular_vel = self.sign * (self.rotation - prev_rotation) / dt
 
+
     def select(self, pos):
         dist = self.pos - pos
         return vector_length(dist) - vector_length(self.length)
 
 
-    def activate(self, event):
+    def activate(self):
         self.is_pressed = True
 
     
-    def deactivate(self, event):
+    def deactivate(self):
         self.is_pressed = False
 
 
@@ -145,18 +147,15 @@ class CircleObstacle:
 
 
 class Shooter:
-    def __init__(self, pos, rest_pos, k, mass, button):
+    def __init__(self, pos, rest_pos, k, mass, key):
         self.pos = np.copy(pos)
         self.rest_pos = np.copy(rest_pos)
         self.k = k
         self.mass = mass
         self.push_vel = 0.0
         self.is_pressed = False
+        self.key = key
 
-        '''
-        window.bind(f'<KeyPress-{button}>', self.activate)
-        window.bind(f'<KeyRelease-{button}>', self.deactivate)
-        '''
 
     def simulate(self, dt):
         if (self.is_pressed):
@@ -170,13 +169,12 @@ class Shooter:
             self.pos[0][1] = self.rest_pos[1]
 
 
-    def activate(self, event):
+    def activate(self):
         self.is_pressed = True
 
 
-    def deactivate(self, event):
+    def deactivate(self):
         self.is_pressed = False
-
 
 
 class PinballScene:
@@ -376,7 +374,6 @@ class PinballScene:
                 self.handle_ball_ball_collision(ball, self.balls[j])    
 
 
-
 def setup_scene() -> PinballScene:
     global window
     global statics
@@ -408,12 +405,12 @@ def setup_scene() -> PinballScene:
     obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 1000.0))
 
     for c in obstacles:
-        pygame.draw.circle(statics,(176,224,230),c.pos,c.radius,0) #0 = FILL
+        pygame.draw.circle(statics, (176, 224, 230), c.pos, c.radius, 0) #0 = FILL
 
     # shooters
     shooters = []
     fixed_pos = np.array([[cWidth - 40, cHeight - 60], [cWidth, cHeight]])
-    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 2000, 1, 'k'))
+    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 2000, 1, pygame.K_k))
 
     # flippers
     radius = int(cWidth * 0.02)
@@ -426,8 +423,8 @@ def setup_scene() -> PinballScene:
     y1 = cHeight * 0.9 
     x2 = cWidth * 0.7 
     y2 = cHeight * 0.9
-    flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, window, 'a')
-    flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, window, 'd')
+    flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, pygame.K_a)
+    flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, pygame.K_d)
     flippers = [flipper1, flipper2]
 
     #Commit Changes on Statics-Surface to window
@@ -441,16 +438,16 @@ def draw(pinball_scene: PinballScene):
     global window
     global dynamics
 
-    #Fills the Dynamics Surface with black --> deletes all Objects
-    dynamics.fill((0,0,0))
+    # Fills the Dynamics Surface with black --> deletes all Objects
+    dynamics.fill((0, 0, 0))
     
     # Draw Polygon on Dynamics Surface: Color = White, Filled
-    pygame.draw.polygon(dynamics,(255,255,255),pinball_scene.border,0)
+    pygame.draw.polygon(dynamics, (255, 255, 255), pinball_scene.border, 0)
 
     # Draw the balls:
     for b in pinball_scene.balls:
-        ball_ob = pygame.transform.scale(ball_img,(2*b.radius,2*b.radius))
-        dynamics.blit(ball_ob,(b.pos[0] - b.radius, b.pos[1] - b.radius))
+        ball_ob = pygame.transform.scale(ball_img, (2 * b.radius, 2 * b.radius))
+        dynamics.blit(ball_ob, (b.pos[0] - b.radius, b.pos[1] - b.radius))
 
     # Draw the Shooters:
     for s in pinball_scene.shooters:
@@ -458,40 +455,64 @@ def draw(pinball_scene: PinballScene):
         y1 = s.pos[0][1]
         x2 = s.pos[1][0]
         y2 = s.pos[1][1]
-        rect = pygame.Rect(x1, y1, x2-x1, y2-y1)
+        rect = pygame.Rect(x1, y1, x2, y2)
 
-        pygame.draw.rect(dynamics,(255,0,0),rect,0)
+        pygame.draw.rect(dynamics, (255, 0, 0), rect, 0)
   
     # Draw the flippers
     for f in pinball_scene.flippers:
         new_coords = f.rotate(f.rest_angle + f.rotation * f.sign)
 
-        pygame.draw.polygon(dynamics,(255,0,0),new_coords,0)
-        pygame.draw.circle(dynamics,(255,0,0),new_coords[2],f.radius,0)
-        pygame.draw.circle(dynamics,(255,0,0),new_coords[5],f.radius,0)
-    
-    '''
-    # Draw the score
-    canvas.create_text(cWidth * 0.5, cHeight * 0.1, text=f'Score: {pinball_scene.score}', fill='red', font=('arial bold', 18))
-    '''
+        pygame.draw.polygon(dynamics, (255, 0, 0), new_coords, 0)
+        pygame.draw.circle(dynamics, (255, 0, 0), new_coords[2], f.radius, 0)
+        pygame.draw.circle(dynamics, (255, 0, 0), new_coords[5], f.radius, 0)
 
-    window.blit(dynamics,(0,0))
-    window.blit(statics,(0,0))
-    #canvas.update()
+    # Draw Score
+    scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, (255, 0, 0))
+    scoreRect = scoreSurface.get_rect(center=(cWidth // 2, 100))
+
+    window.blit(dynamics, (0, 0))
+    window.blit(statics, (0, 0))
+    window.blit(scoreSurface, scoreRect)
 
 
 def update(pinball_scene: PinballScene):
-
     while True:
         for event in pygame.event.get():
-            if(event.type == pygame.QUIT):
+            if (event.type == pygame.QUIT):
                 pygame.quit()
                 quit()
+            
+            if event.type == pygame.KEYDOWN:
+                # Flippers
+                for flipper in pinball_scene.flippers:
+                    if event.key == flipper.key:
+                        flipper.activate()
+
+                # Shooters
+                for shooter in pinball_scene.shooters:
+                    if event.key == shooter.key:
+                        shooter.activate()
+
+                # restart game
+                if event.key == pygame.K_r:
+                    update(setup_scene())
+                
+            if event.type == pygame.KEYUP:
+                # Flippers
+                for flipper in pinball_scene.flippers:
+                    if event.key == flipper.key:
+                        flipper.deactivate()
+
+                # Shooters
+                for shooter in pinball_scene.shooters:
+                    if event.key == shooter.key:
+                        shooter.deactivate()
 
         pinball_scene.simulate()
         draw(pinball_scene)
 
-        #flip() is the update function for the window
+        # flip() is the update function for the window
         pygame.display.flip()
 
         time.sleep(pinball_scene.dt)
@@ -502,16 +523,8 @@ def main():
     draw(pinball_scene)
     update(pinball_scene)
 
-'''
-start_button = tk.Button(window, text='START', font=('arial bold', 18), height=2, width=10,
-    bg="black", fg="white", activebackground="green", relief="raised", command=lambda:(update(setup_scene())))
-start_button.pack(side=tk.BOTTOM, anchor=tk.S)
-'''
-# TODO: this doesn't quite work yet. It still shows exception messages when closing the window
-#window.protocol("WM_DELETE_WINDOW", window.destroy)     # properly close tkinter window when pressing X button, so we don't get all the exception messages
 
 if __name__ == "__main__":
     main()
 
-#window.mainloop()
 pygame.quit()
