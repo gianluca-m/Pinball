@@ -1,19 +1,20 @@
 import numpy as np
 import math
-import tkinter as tk
 import time
 import pygame
 
 '''
     adjusted from: https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/04-pinball.html
 '''
+pygame.mixer.init()
 pygame.init()
 pygame.font.init()
+
 cHeight = 900        
 cWidth = int(3 / 5 * cHeight)
 
 # Creates a Pygame window with title. Size is a bit bigger for debug purposes
-window = pygame.display.set_mode((cWidth + 50, cHeight + 50))
+window = pygame.display.set_mode((cWidth, cHeight))
 pygame.display.set_caption("Pinball")
 window.fill((0, 255, 255))
 
@@ -24,8 +25,19 @@ dynamics.fill((255, 255, 255))
 statics = pygame.Surface((cWidth, cHeight), pygame.SRCALPHA, 32)
 statics.convert_alpha()
 
+# Load Flipper Sound
+f_sound = pygame.mixer.Sound("sounds/flipper_sound.mp3")
+
+# Load Background Texture
+bg_img = pygame.image.load("textures/background.jpeg").convert(24)
+bg_img = pygame.transform.scale(bg_img, (cWidth,cHeight))
+bg_img.set_alpha(128)
+# Load Obstacle Texture
+obst_img = pygame.image.load("textures/obstacle.png").convert()
+obst_img.set_colorkey((255, 255, 255))
+
 # Load Ball Texture
-ball_img = pygame.image.load("ball.png").convert()
+ball_img = pygame.image.load("textures/ball2.png").convert()
 ball_img.set_colorkey((255, 255, 255))
 
 # Score Font
@@ -64,11 +76,16 @@ class Ball:
         self.pos = pos
         self.vel = vel 
         self.restitution = restitution
+        self.ang_vel = 0.0
 
 
     def simulate(self, dt, g):
         self.vel += g * dt
         self.pos += self.vel * dt
+
+        self.ang_vel += (-self.vel[0] / self.radius)*dt * 180 / math.pi
+        self.ang_vel = self.ang_vel % 360.0
+        
 
     
 
@@ -106,6 +123,7 @@ class Flipper:
 
     def activate(self):
         self.is_pressed = True
+        f_sound.play()
 
     
     def deactivate(self):
@@ -155,6 +173,7 @@ class Shooter:
         self.push_vel = 0.0
         self.is_pressed = False
         self.key = key
+        self.checkout = 0
 
 
     def simulate(self, dt):
@@ -167,6 +186,13 @@ class Shooter:
             self.push_vel = a * dt
         else:
             self.pos[0][1] = self.rest_pos[1]
+            if self.checkout == 3:
+                self.push_vel = 0
+                self.checkout = 0
+            else:
+                self.checkout += 1
+
+
 
 
     def activate(self):
@@ -382,7 +408,7 @@ def setup_scene() -> PinballScene:
     border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight], [cWidth,cHeight], [cWidth,60], [cWidth-60,0.0]])
     
     # balls
-    radius = 10
+    radius = 15
     mass = math.pi * radius**2
     restitution = 0.2
     pos1 = np.array([cWidth * 0.25, cHeight * 0.05])
@@ -406,7 +432,10 @@ def setup_scene() -> PinballScene:
     obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 1000.0))
 
     for c in obstacles:
-        pygame.draw.circle(statics, (176, 224, 230), c.pos, c.radius, 0) #0 = FILL
+        dim = 2* c.radius
+        ob = pygame.transform.scale(obst_img, (dim,dim))
+        statics.blit(ob, (c.pos[0] - c.radius, c.pos[1]-c.radius))
+        #pygame.draw.circle(statics, (176, 224, 230), c.pos, c.radius, 0) #0 = FILL
 
     # shooters
     shooters = []
@@ -441,14 +470,17 @@ def draw(pinball_scene: PinballScene):
 
     # Fills the Dynamics Surface with black --> deletes all Objects
     dynamics.fill((0, 0, 0))
-    
+    dynamics.blit(bg_img,(0,0))
     # Draw Polygon on Dynamics Surface: Color = White, Filled
-    pygame.draw.polygon(dynamics, (255, 255, 255), pinball_scene.border, 0)
+    pygame.draw.polygon(dynamics, (255, 255, 255), pinball_scene.border, 1)
 
     # Draw the balls:
     for b in pinball_scene.balls:
-        ball_ob = pygame.transform.scale(ball_img, (2 * b.radius, 2 * b.radius))
-        dynamics.blit(ball_ob, (b.pos[0] - b.radius, b.pos[1] - b.radius))
+        dim = 2 * b.radius
+        ball_ob = pygame.transform.scale(ball_img, (dim,dim))
+        r_ball = pygame.transform.rotate(ball_ob,b.ang_vel)
+        rect = r_ball.get_rect()
+        dynamics.blit(r_ball, (b.pos[0] - rect.width/2, b.pos[1] - rect.height/2))
 
     # Draw the Shooters:
     for s in pinball_scene.shooters:
@@ -480,6 +512,7 @@ def update(pinball_scene: PinballScene):
         for event in pygame.event.get():
             if (event.type == pygame.QUIT):
                 pygame.quit()
+                pygame.mixer.quit()
                 quit()
             
             if event.type == pygame.KEYDOWN:
