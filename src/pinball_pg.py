@@ -20,10 +20,9 @@ window.fill((0, 255, 255))
 
 # Creates two Surfaces (Canvas). Statics has transparent background
 dynamics = pygame.Surface((cWidth, cHeight))
-dynamics.fill((255, 255, 255))
+dynamics.set_colorkey((255,255,255))
 
-statics = pygame.Surface((cWidth, cHeight), pygame.SRCALPHA, 32)
-statics.convert_alpha()
+statics = pygame.Surface((cWidth, cHeight))
 
 # Load Flipper Sound
 f_sound = pygame.mixer.Sound("sounds/flipper_sound.mp3")
@@ -32,6 +31,7 @@ f_sound = pygame.mixer.Sound("sounds/flipper_sound.mp3")
 bg_img = pygame.image.load("textures/background.jpeg").convert(24)
 bg_img = pygame.transform.scale(bg_img, (cWidth,cHeight))
 bg_img.set_alpha(128)
+
 # Load Obstacle Texture
 obst_img = pygame.image.load("textures/obstacle.png").convert()
 obst_img.set_colorkey((255, 255, 255))
@@ -404,9 +404,11 @@ class PinballScene:
 def setup_scene() -> PinballScene:
     global window
     global statics
+    statics.fill((0,0,0))
+    statics.blit(bg_img,(0,0))
     # scene borders --> Define set of pixel pairs
     border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight], [cWidth,cHeight], [cWidth,60], [cWidth-60,0.0]])
-    
+    pygame.draw.polygon(statics,(255,255,255),border,1)
     # balls
     radius = 15
     mass = math.pi * radius**2
@@ -469,10 +471,10 @@ def draw(pinball_scene: PinballScene):
     global dynamics
 
     # Fills the Dynamics Surface with black --> deletes all Objects
-    dynamics.fill((0, 0, 0))
-    dynamics.blit(bg_img,(0,0))
+    dynamics.set_colorkey((0,0,0))
+    dynamics.fill((255,255,255))
+    dynamics.set_colorkey((255,255,255))
     # Draw Polygon on Dynamics Surface: Color = White, Filled
-    pygame.draw.polygon(dynamics, (255, 255, 255), pinball_scene.border, 1)
 
     # Draw the balls:
     for b in pinball_scene.balls:
@@ -502,8 +504,9 @@ def draw(pinball_scene: PinballScene):
     scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, (255, 0, 0))
     scoreRect = scoreSurface.get_rect(center=(cWidth // 2, 100))
 
-    window.blit(dynamics, (0, 0))
+    
     window.blit(statics, (0, 0))
+    window.blit(dynamics, (0, 0))
     window.blit(scoreSurface, scoreRect)
 
 
