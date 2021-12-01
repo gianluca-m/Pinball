@@ -6,4 +6,4 @@ Physically-based Simulation in Computer Graphics (2021@ETH Zurich) student proje
 Setup conda environment: `conda env create -f pinball.yaml -n pinball`   
 Activate environment: `conda activate pinball
 
-<img src="curr_stup.jpg" alt="Current GUI layout" width="200"/>
+![Current Layout](curr_stup.png | width = 100)
