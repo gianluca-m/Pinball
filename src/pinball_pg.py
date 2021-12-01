@@ -10,7 +10,11 @@ pygame.mixer.init()
 pygame.init()
 pygame.font.init()
 
-cHeight = 900        
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+cHeight = 1200        
 cWidth = int(3 / 5 * cHeight)
 
 # Creates a Pygame window with title. Size is a bit bigger for debug purposes
@@ -20,12 +24,17 @@ window.fill((0, 255, 255))
 
 # Creates two Surfaces (Canvas). Statics has transparent background
 dynamics = pygame.Surface((cWidth, cHeight))
-dynamics.set_colorkey((255,255,255))
+dynamics.set_colorkey(WHITE)
 
 statics = pygame.Surface((cWidth, cHeight))
 
-# Load Flipper Sound
+# Load Sounds
 f_sound = pygame.mixer.Sound("sounds/flipper_sound.mp3")
+start_sound = pygame.mixer.Sound("sounds/startup.wav")
+restart_sound = pygame.mixer.Sound("sounds/start.wav")
+o_sound = pygame.mixer.Sound("sounds/obstacle_collision.wav")
+
+
 
 # Load Background Texture
 bg_img = pygame.image.load("textures/background.jpeg").convert(24)
@@ -34,8 +43,12 @@ bg_img.set_alpha(128)
 
 # Load Obstacle Texture
 obst_img = pygame.image.load("textures/obstacle.png").convert_alpha()
+
 # Load Ball Texture
 ball_img = pygame.image.load("textures/ball2.png").convert_alpha()
+
+# Load Shooter Texture
+shooter_img = pygame.image.load("textures/shooter.png").convert()
 
 # Score Font
 scoreFont = pygame.font.SysFont('arial bold', 40)
@@ -65,6 +78,9 @@ def angle_between_vectors(a, b):
     unit_b = b / vector_length(b)
     return np.arccos(np.clip(unit_a.dot(unit_b), -1.0, 1.0))
 
+def estimate_volume(vel,sound):
+    k = min(5.0, vector_length(vel) / 900)
+    sound.set_volume(k)
 
 class Ball:
     def __init__(self, pos, vel, radius, mass, restitution):
@@ -175,7 +191,7 @@ class Shooter:
 
     def simulate(self, dt):
         if (self.is_pressed):
-            self.pos[0][1] = max(self.pos[0][1] + 1, self.rest_pos[1])
+            self.pos[0][1] = min(self.pos[0][1] + 1, cHeight-1)
             # F = -kx
             force = -self.k * (self.rest_pos[1] - self.pos[0][1])
             # F = m*a --> a = F/m
@@ -258,6 +274,8 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (obstacle.push_vel - vel)
 
+        estimate_volume(ball.vel,o_sound)
+        o_sound.play()
         # update score
         self.score += 1
 
@@ -272,7 +290,7 @@ class PinballScene:
 
         if shooter.is_pressed:
             # We are charging the Shooter so we dont launch (just bounce)
-            ball.vel[1] = 0.95 * -ball.vel[1]
+            ball.vel[1] = 0.6 * -ball.vel[1]
             return
 
         # Update Velocity in  normal state
@@ -307,21 +325,25 @@ class PinballScene:
 
 
     @staticmethod
-    def handle_ball_border_collision(ball: Ball, border):
+    def handle_ball_border_collision(ball: Ball, border, uncon):
         # find closest segment
         min_dist = 0.0
         closest = np.array([])
         normal = np.array([1.0, 0.0])
+        l = len(border)
+        for i in range(l):
+            if(i == l-1 and uncon):
+                break
 
-        for i in range(len(border) - 1):
             a = border[i]
-            b = border[(i+1)]
+            b = border[(i+1)%l]
             c = closest_point_on_segment(ball.pos, a, b)
             dir = ball.pos - c
             dist = vector_length(dir)
 
             ab = a - b
             curr_normal = np.array([-ab[1], ab[0]])
+            
 
             # if closest point 'c' is one of the border endpoints, the dist can be equal for two borders, thus need another way to determine closest border:
             #   use angle between dir = (ball.pos - c) and either the current inverted normal or the invereted normal of the currently closest border
@@ -373,26 +395,28 @@ class PinballScene:
             if (ball.pos[0] > cWidth / 2):
                 if (ball.pos[1] > cHeight / 2):
                     # BOTTOM RIGHT
-                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[2])
                     self.handle_ball_flipper_collision(ball, self.flippers[1])
-                    self.handle_ball_border_collision(ball, self.border[3:10])
+                    self.handle_ball_border_collision(ball, self.border[2:11], True)
+                    self.handle_ball_border_collision(ball, self.obstacles[5], False)
                     # Ball-Shooter Effect 
                     if (ball.pos[0] >= cWidth -50):
                         self.handle_ball_shooter_collision(ball, self.shooters[0])
                 else: 
                     # TOP RIGHT
-                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[1])
-                    self.handle_ball_border_collision(ball, self.border[[7, 8, 9, 10, 0]])
+                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[2])
+                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[3])
+                    self.handle_ball_border_collision(ball, self.border[[4, 5, 6, 7, 8, 9, 10, 11, 0]], True)
             else:
                 if (ball.pos[1] > cHeight / 2):
                     # BOTTOM LEFT
-                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[3])
                     self.handle_ball_flipper_collision(ball, self.flippers[0])
-                    self.handle_ball_border_collision(ball, self.border[:5])
+                    self.handle_ball_border_collision(ball, self.border[:4], True)
+                    self.handle_ball_border_collision(ball, self.obstacles[4], False)
                 else:
                     # TOP LEFT
                     self.handle_ball_circle_obstacle_collision(ball, self.obstacles[0])
-                    self.handle_ball_border_collision(ball, self.border[[10, 0, 1]])
+                    self.handle_ball_circle_obstacle_collision(ball, self.obstacles[1])
+                    self.handle_ball_border_collision(ball, self.border[[11, 0, 1]], True)
 
             for j in range(i+1, len(self.balls)):
                 self.handle_ball_ball_collision(ball, self.balls[j])    
@@ -403,9 +427,11 @@ def setup_scene() -> PinballScene:
     global statics
     statics.fill((0,0,0))
     statics.blit(bg_img,(0,0))
+
     # scene borders --> Define set of pixel pairs
-    border = np.array([[0.0, 0.0], [0.0,cHeight*0.75], [cWidth*0.3,cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.7,cHeight], [cWidth*0.7,cHeight*0.9], [cWidth-40, cHeight*0.75], [cWidth-40,cHeight], [cWidth,cHeight], [cWidth,60], [cWidth-60,0.0]])
-    pygame.draw.polygon(statics,(255,255,255),border,1)
+    border = np.array([[0.0, 0.0], [0.0,cHeight*0.9], [cWidth*0.3,cHeight], [(cWidth*0.7)-80.0,cHeight], [cWidth-80.0, cHeight*0.9], [cWidth-80.0,cHeight*0.4],[cWidth-100.0,cHeight*0.35],[cWidth-40.0,cHeight*0.15],[cWidth-40.0,cHeight], [cWidth,cHeight], [cWidth,60.0], [cWidth-60,0.0]])
+    pygame.draw.polygon(statics, WHITE ,border, 1)
+
     # balls
     radius = 15
     mass = math.pi * radius**2
@@ -414,21 +440,22 @@ def setup_scene() -> PinballScene:
     vel1 = np.array([-1500.0, 0.0])
     ball1 = Ball(pos1, vel1, radius, mass, restitution)
 
-    pos2 = np.array([cWidth * 0.01, cHeight * 0.8])
+    pos2 = np.array([cWidth * 0.2, cHeight * 0.4])
     vel2 = np.array([0.0, 0.0])
     ball2 = Ball(pos2, vel2, radius, mass, restitution)
 
-    pos3 = np.array([cWidth - 40, cHeight * 0.45])
-    vel3 = np.array([0.0, 0.0])
+    pos3 = np.array([cWidth - 20, cHeight * 0.9])
+    vel3 = np.array([400.0, 0.0])
     ball3 = Ball(pos3, vel3, radius, mass, restitution)
     balls = [ball1, ball2, ball3]
 
     # obstacles
     obstacles = []
     obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.2 * cHeight]), 70, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.4 * cHeight]), 50, 500.0))
-    obstacles.append(CircleObstacle(np.array([0.65 * cWidth, 0.7 * cHeight]), 40, 300.0))
-    obstacles.append(CircleObstacle(np.array([0.2 * cWidth, 0.61 * cHeight]), 50, 1000.0))
+    obstacles.append(CircleObstacle(np.array([0.25 * cWidth, 0.33 * cHeight]), 50, 1000.0))
+    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.3 * cHeight]), 50, 500.0))
+    obstacles.append(CircleObstacle(np.array([0.64 * cWidth, 0.38 * cHeight]), 40, 300.0))
+    
 
     for c in obstacles:
         dim = 2* c.radius
@@ -448,13 +475,25 @@ def setup_scene() -> PinballScene:
     rest_angle = 30
     angular_vel = 1000
     restitution = 1.0
-    x1 = cWidth * 0.3 
+    x1 = cWidth * 0.3 -40
     y1 = cHeight * 0.9 
-    x2 = cWidth * 0.7 
+    x2 = cWidth * 0.7 -40
     y2 = cHeight * 0.9
     flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, pygame.K_a)
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, pygame.K_d)
     flippers = [flipper1, flipper2]
+
+    # Triangles
+    l_triag = np.array([[x1 ,y1-60],[x1-100,y1-120],[x1-100,y1-240]])
+    r_triag = np.array([[x2 ,y2-60],[x2+100,y2-240],[x2+100,y2-120]])
+
+    pygame.draw.polygon(statics, WHITE, l_triag, 0)
+    pygame.draw.polygon(statics, WHITE, r_triag, 0)
+
+    obstacles.append(l_triag)
+    obstacles.append(r_triag)
+
+    
 
     # Commit Changes on Statics-Surface to window
     window.blit(statics, (0, 0))
@@ -468,9 +507,9 @@ def draw(pinball_scene: PinballScene):
     global dynamics
 
     # Fills the Dynamics Surface with black --> deletes all Objects
-    dynamics.set_colorkey((0,0,0))
-    dynamics.fill((255,255,255))
-    dynamics.set_colorkey((255,255,255))
+    dynamics.set_colorkey(BLACK)
+    dynamics.fill(WHITE)
+    dynamics.set_colorkey(WHITE)
     # Draw Polygon on Dynamics Surface: Color = White, Filled
 
     # Draw the balls:
@@ -487,18 +526,20 @@ def draw(pinball_scene: PinballScene):
         y1 = s.pos[0][1]
         x2 = s.pos[1][0]
         y2 = s.pos[1][1]
-        rect = pygame.Rect(x1, y1, x2, y2)
-        pygame.draw.rect(dynamics, (255, 0, 0), rect, 0)
+        #rect = pygame.Rect(x1, y1, x2, y2)
+        s_img = pygame.transform.scale(shooter_img, (x2-x1, y2-y1))
+        #pygame.draw.rect(dynamics, (255, 0, 0), rect, 0)
+        dynamics.blit(s_img,(x1, y1))
   
     # Draw the flippers
     for f in pinball_scene.flippers:
         new_coords = f.rotate(f.rest_angle + f.rotation * f.sign)
-        pygame.draw.polygon(dynamics, (255, 0, 0), new_coords, 0)
-        pygame.draw.circle(dynamics, (255, 0, 0), new_coords[2], f.radius, 0)
-        pygame.draw.circle(dynamics, (255, 0, 0), new_coords[5], f.radius, 0)
+        pygame.draw.polygon(dynamics, RED, new_coords, 0)
+        pygame.draw.circle(dynamics, RED, new_coords[2], f.radius, 0)
+        pygame.draw.circle(dynamics, RED, new_coords[5], f.radius, 0)
 
     # Draw Score
-    scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, (255, 0, 0))
+    scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, RED)
     scoreRect = scoreSurface.get_rect(center=(cWidth // 2, 100))
 
     
@@ -528,6 +569,7 @@ def update(pinball_scene: PinballScene):
 
                 # restart game
                 if event.key == pygame.K_r:
+                    restart_sound.play()
                     update(setup_scene())
                 
             if event.type == pygame.KEYUP:
