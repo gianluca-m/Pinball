@@ -33,12 +33,9 @@ bg_img = pygame.transform.scale(bg_img, (cWidth,cHeight))
 bg_img.set_alpha(128)
 
 # Load Obstacle Texture
-obst_img = pygame.image.load("textures/obstacle.png").convert()
-obst_img.set_colorkey((255, 255, 255))
-
+obst_img = pygame.image.load("textures/obstacle.png").convert_alpha()
 # Load Ball Texture
-ball_img = pygame.image.load("textures/ball2.png").convert()
-ball_img.set_colorkey((255, 255, 255))
+ball_img = pygame.image.load("textures/ball2.png").convert_alpha()
 
 # Score Font
 scoreFont = pygame.font.SysFont('arial bold', 40)
