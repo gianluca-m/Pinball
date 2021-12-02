@@ -33,6 +33,8 @@ f_sound = pygame.mixer.Sound("sounds/flipper_sound.mp3")
 start_sound = pygame.mixer.Sound("sounds/startup.wav")
 restart_sound = pygame.mixer.Sound("sounds/start.wav")
 o_sound = pygame.mixer.Sound("sounds/obstacle_collision.wav")
+gameover_sound = pygame.mixer.Sound("sounds/gameover.wav")
+ball_lost_sound = pygame.mixer.Sound("sounds/shutdown3.wav")
 
 
 
@@ -45,7 +47,7 @@ bg_img.set_alpha(128)
 obst_img = pygame.image.load("textures/obstacle.png").convert_alpha()
 
 # Load Ball Texture
-ball_img = pygame.image.load("textures/ball2.png").convert_alpha()
+ball_img = pygame.image.load("textures/ball.png").convert_alpha()
 
 # Load Shooter Texture
 shooter_img = pygame.image.load("textures/shooter.png").convert()
@@ -81,6 +83,12 @@ def angle_between_vectors(a, b):
 def estimate_volume(vel,sound):
     k = min(5.0, vector_length(vel) / 900)
     sound.set_volume(k)
+
+def game_over_logic():
+    time.sleep(2)
+    gameover_sound.play()
+    time.sleep(6)
+    update(setup_scene())
 
 class Ball:
     def __init__(self, pos, vel, radius, mass, restitution):
@@ -394,10 +402,17 @@ class PinballScene:
             # BROAD PHASE COLLISION DETECTION
             if (ball.pos[0] > cWidth / 2):
                 if (ball.pos[1] > cHeight / 2):
+                    if(ball.pos[1] >= cHeight + ball.radius):
+                        ball_lost_sound.play()
+                        #Ball is out
+                        self.balls.remove(ball)
+                        i = i-1
+                        break
                     # BOTTOM RIGHT
                     self.handle_ball_flipper_collision(ball, self.flippers[1])
-                    self.handle_ball_border_collision(ball, self.border[2:11], True)
+                    self.handle_ball_border_collision(ball, self.border[3:11], True)
                     self.handle_ball_border_collision(ball, self.obstacles[5], False)
+                    self.handle_ball_border_collision(ball, self.obstacles[7], False)
                     # Ball-Shooter Effect 
                     if (ball.pos[0] >= cWidth -50):
                         self.handle_ball_shooter_collision(ball, self.shooters[0])
@@ -408,10 +423,17 @@ class PinballScene:
                     self.handle_ball_border_collision(ball, self.border[[4, 5, 6, 7, 8, 9, 10, 11, 0]], True)
             else:
                 if (ball.pos[1] > cHeight / 2):
+                    if(ball.pos[1] >= cHeight + ball.radius):
+                        ball_lost_sound.play()
+                        #Ball is out
+                        self.balls.remove(ball)
+                        i = i-1
+                        break
                     # BOTTOM LEFT
                     self.handle_ball_flipper_collision(ball, self.flippers[0])
-                    self.handle_ball_border_collision(ball, self.border[:4], True)
+                    self.handle_ball_border_collision(ball, self.border[:3], True)
                     self.handle_ball_border_collision(ball, self.obstacles[4], False)
+                    self.handle_ball_border_collision(ball, self.obstacles[6], False)
                 else:
                     # TOP LEFT
                     self.handle_ball_circle_obstacle_collision(ball, self.obstacles[0])
@@ -420,7 +442,9 @@ class PinballScene:
 
             for j in range(i+1, len(self.balls)):
                 self.handle_ball_ball_collision(ball, self.balls[j])    
-
+        #Game Over Logic
+        if(len(self.balls) == 0):
+            game_over_logic()
 
 def setup_scene() -> PinballScene:
     global window
@@ -433,7 +457,7 @@ def setup_scene() -> PinballScene:
     pygame.draw.polygon(statics, WHITE ,border, 1)
 
     # balls
-    radius = 15
+    radius = 12
     mass = math.pi * radius**2
     restitution = 0.2
     pos1 = np.array([cWidth * 0.25, cHeight * 0.05])
@@ -487,11 +511,19 @@ def setup_scene() -> PinballScene:
     l_triag = np.array([[x1 ,y1-60],[x1-100,y1-120],[x1-100,y1-240]])
     r_triag = np.array([[x2 ,y2-60],[x2+100,y2-240],[x2+100,y2-120]])
 
+    l_lower = np.array([[x1,y1+radius+8], [x1-140,y1-75], [x1-140,y1-200], [x1-130,y1-200], [x1-130,y1-75], [x1,y1]])
+    r_lower = np.array([[x2 ,y2],[x2+130,y2-75], [x2+130,y2-200], [x2+140,y1-200], [x2+140,y2-75], [x2,y2+radius+8]])
+    
     pygame.draw.polygon(statics, WHITE, l_triag, 0)
     pygame.draw.polygon(statics, WHITE, r_triag, 0)
+    pygame.draw.polygon(statics, WHITE, l_lower, 0)
+    pygame.draw.polygon(statics, WHITE, r_lower, 0)
 
     obstacles.append(l_triag)
     obstacles.append(r_triag)
+    obstacles.append(l_lower)
+    obstacles.append(r_lower)
+
 
     
 
