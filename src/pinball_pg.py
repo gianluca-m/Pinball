@@ -13,6 +13,7 @@ pygame.font.init()
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+BLUE = (0, 0, 255)
 
 cHeight = 1200        
 cWidth = int(3 / 5 * cHeight)
@@ -38,6 +39,7 @@ restart_sound = pygame.mixer.Sound("sounds/start.wav")
 o_sound = pygame.mixer.Sound("sounds/obstacle_collision.wav")
 gameover_sound = pygame.mixer.Sound("sounds/gameover.wav")
 ball_lost_sound = pygame.mixer.Sound("sounds/shutdown3.wav")
+teleporter_sound = pygame.mixer.Sound("sounds/hit+start.wav")
 
 # Load Endscreen Texture
 endscreen_img = pygame.image.load("textures/endscreen.png").convert()
@@ -261,14 +263,19 @@ class Shooter:
     def deactivate(self):
         self.is_pressed = False
 
-
+class Teleporter:
+    def __init__(self, pos, dest, radius):
+        self.pos = np.copy(pos)
+        self.dest = np.copy(dest)
+        self.radius = radius
 
 class PinballScene:
-    def __init__(self, border, balls, obstacles, shooters, flippers, g=np.array([0, 981]), dt=1/120):
+    def __init__(self, border, balls, obstacles, shooters, teleporters, flippers, g=np.array([0, 981]), dt=1/120):
         self.border = border
         self.balls = balls
         self.obstacles = obstacles
         self.shooters = shooters
+        self.teleporters = teleporters
         self.flippers = flippers
         self.g = g
         self.dt = dt
@@ -342,6 +349,20 @@ class PinballScene:
         # Update Velocity in  normal state
         ball.vel[1] = 0.6 * -ball.vel[1]  - shooter.push_vel
 
+
+    def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter):
+        squared_distance = np.sqrt(((teleporter.pos[0] - ball.pos[0])**2) + ((teleporter.pos[1] - ball.pos[1])**2))
+        
+        #Not Completely Inside
+        if (squared_distance + ball.radius > teleporter.radius):
+            return
+
+        ball.pos = teleporter.dest
+        ball.vel = [0,0]
+
+        teleporter_sound.play()
+        self.score += 1
+        
 
     @staticmethod
     def handle_ball_flipper_collision(ball: Ball, flipper: Flipper):
@@ -458,6 +479,7 @@ class PinballScene:
                     # TOP RIGHT
                     self.handle_ball_circle_obstacle_collision(ball, self.obstacles[2])
                     self.handle_ball_circle_obstacle_collision(ball, self.obstacles[3])
+                    self.handle_ball_teleporter_collision(ball,self.teleporters)
                     self.handle_ball_border_collision(ball, self.border[[13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 0]], True)
             else:
                 if (ball.pos[1] > cHeight / 2):
@@ -491,7 +513,7 @@ def setup_scene() -> PinballScene:
     statics.blit(bg_img,(0,0))
 
     # scene borders --> Define set of pixel pairs
-    border = np.array([[60.0, 0.0], [0.0, 60.0], [0.0, cHeight*0.3], [cWidth*0.1,cHeight*0.39], [0.0, cHeight*0.4], [cWidth*0.08, cHeight*0.5] , [0.0, cHeight*0.55], [cWidth*0.05, cHeight*0.6],[0.0, cHeight*0.71], [0.0, cHeight*0.9], [cWidth*0.3,cHeight], [(cWidth*0.7)-80.0, cHeight], [cWidth-80.0, cHeight*0.9], [cWidth-80.0,cHeight*0.65], [cWidth-100, cHeight*0.5], [cWidth-80, cHeight*0.4], [cWidth-100.0,cHeight*0.35],[cWidth-60.0,cHeight*0.15], [cWidth-40.0, cHeight*0.15], [cWidth-40.0,cHeight], [cWidth,cHeight], [cWidth,60.0], [cWidth-60,0.0]])
+    border = np.array([[cWidth*0.08, 0.0], [0.0, cHeight*0.05], [0.0, cHeight*0.3], [cWidth*0.1,cHeight*0.39], [0.0, cHeight*0.4], [cWidth*0.08, cHeight*0.5] , [0.0, cHeight*0.55], [cWidth*0.05, cHeight*0.6],[0.0, cHeight*0.71], [0.0, cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.6, cHeight], [cWidth*0.9, cHeight*0.9], [cWidth*0.9,cHeight*0.65], [cWidth*0.83, cHeight*0.5], [cWidth*0.86, cHeight*0.4], [cWidth*0.92,cHeight*0.41],[cWidth*0.92,cHeight*0.15], [cWidth*0.95, cHeight*0.15], [cWidth*0.95,cHeight], [cWidth,cHeight], [cWidth, cHeight*0.05], [cWidth*0.92,0.0]])
     pygame.draw.polygon(statics, WHITE ,border, 1)
 
     # balls
@@ -502,7 +524,7 @@ def setup_scene() -> PinballScene:
     vel1 = np.array([-1500.0, 0.0])
     ball1 = Ball(pos1, vel1, radius, mass, restitution)
 
-    pos2 = np.array([cWidth * 0.2, cHeight * 0.4])
+    pos2 = np.array([cWidth * 0.88, cHeight * 0.2])
     vel2 = np.array([0.0, 0.0])
     ball2 = Ball(pos2, vel2, radius, mass, restitution)
 
@@ -527,8 +549,16 @@ def setup_scene() -> PinballScene:
 
     # shooters
     shooters = []
-    fixed_pos = np.array([[cWidth - 40, cHeight - 60], [cWidth, cHeight]])
-    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 2500, 1, pygame.K_k))
+    fixed_pos = np.array([[cWidth*0.95, cHeight*0.95], [cWidth, cHeight]])
+    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 3000, 1, pygame.K_k))
+
+    # Teleporter
+    tp_radi = cWidth * 0.03
+    active = np.array([0.89 * cWidth, 0.385 * cHeight])
+    passive = np.array([0.11 * cWidth, 0.02 * cHeight])
+    teleporters=(Teleporter(active, passive, tp_radi))
+    pygame.draw.circle(statics, RED, active, tp_radi, 2)
+    pygame.draw.circle(statics, BLUE, passive, tp_radi, 2)
 
     # flippers
     radius = int(cWidth * 0.02)
@@ -568,7 +598,7 @@ def setup_scene() -> PinballScene:
     # Commit Changes on Statics-Surface to window
     window.blit(statics, (0, 0))
 
-    pinball_scene = PinballScene(border, balls, obstacles, shooters, flippers)
+    pinball_scene = PinballScene(border, balls, obstacles, shooters, teleporters, flippers)
     return pinball_scene
 
 
