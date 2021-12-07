@@ -15,6 +15,7 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 BROWN = (139,69,19)
+GIFT = (171,255,0)
 
 cHeight = 1200        
 cWidth = int(3 / 5 * cHeight)
@@ -386,8 +387,9 @@ class PinballScene:
         if (squared_distance + ball.radius > teleporter.radius):
             return
 
-        ball.pos = teleporter.dest
         ball.vel = [0,0]
+        ball.pos = teleporter.dest
+        
 
         teleporter_sound.play()
         self.score += 10
@@ -564,7 +566,7 @@ def setup_scene() -> PinballScene:
     ball1 = Ball(pos1, vel1, radius, mass, restitution)
 
     pos2 = np.array([cWidth * 0.88, cHeight * 0.2])
-    vel2 = np.array([0.0, 0.0])
+    vel2 = np.array([0.0, 1000.0])
     ball2 = Ball(pos2, vel2, radius, mass, restitution)
 
     pos3 = np.array([cWidth - 20, cHeight * 0.9])
@@ -576,11 +578,11 @@ def setup_scene() -> PinballScene:
     r_big = 0.06 * cHeight
     r_small = 0.045 * cHeight
     obstacles = []
-    obstacles.append(CircleObstacle(np.array([0.15 * cWidth, 0.25 * cHeight]), r_big, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.25 * cHeight]), r_big, 200.0))
-    obstacles.append(CircleObstacle(np.array([0.35 * cWidth, 0.35 * cHeight]), r_small, 500.0))
-    obstacles.append(CircleObstacle(np.array([0.55 * cWidth, 0.35 * cHeight]), r_small, 500.0))
-    obstacles.append(CircleObstacle(np.array([0.45 * cWidth, 0.24 * cHeight]), 0.042 * cHeight, 2000.0))
+    obstacles.append(CircleObstacle(np.array([0.15 * cWidth, 0.25 * cHeight]), r_big, 400.0))
+    obstacles.append(CircleObstacle(np.array([0.75 * cWidth, 0.25 * cHeight]), r_big, 400.0))
+    obstacles.append(CircleObstacle(np.array([0.3 * cWidth, 0.42 * cHeight]), r_small, 600.0))
+    obstacles.append(CircleObstacle(np.array([0.6 * cWidth, 0.42 * cHeight]), r_small, 600.0))
+    obstacles.append(CircleObstacle(np.array([0.45 * cWidth, 0.24 * cHeight]), r_big/2, 1000.0))
     
 
     for c in obstacles:
@@ -626,24 +628,26 @@ def setup_scene() -> PinballScene:
     length = int(cWidth * 0.15)
     max_rotation = -80
     rest_angle = 30
-    angular_vel = 1000
+    angular_vel = 1200
     restitution = 1.0
-    x1 = cWidth * 0.3 -40
+    x1 = cWidth * 0.25
     y1 = cHeight * 0.9 
-    x2 = cWidth * 0.7 -40
+    x2 = cWidth * 0.65
     y2 = cHeight * 0.9
+    
     flipper1 = Flipper(np.array([[x1,y1+radius+radius], [x1+length,y1+radius+radius], [x1+length,y1+radius], [x1+length,y1], [x1,y1], [x1,y1+radius]]), length, radius, rest_angle, max_rotation, angular_vel, pygame.K_a)
     flipper2 = Flipper(np.array([[x2,y2+radius+radius], [x2-length,y2+radius+radius], [x2-length,y2+radius], [x2-length,y2], [x2,y2], [x2,y2+radius]]), length, radius, -rest_angle, -max_rotation, angular_vel, pygame.K_d)
     flippers = [flipper1, flipper2]
 
     
-    
+    y_60 = 0.05 * cHeight
+    y_120 = 0.1 * cHeight
     # Triangles
-    l_triag = np.array([[x1 ,y1-60],[x1-100,y1-120],[x1-100,y1-240]])
-    r_triag = np.array([[x2 ,y2-60],[x2+100,y2-240],[x2+100,y2-120]])
+    l_triag = np.array([[x1-radius ,y1-y_60],[0.09 * cWidth,y1-y_120],[0.09 * cWidth,y1-(2*y_120)]])
+    r_triag = np.array([[x2+radius ,y2-y_60],[0.81*cWidth,y2-(2*y_120)],[0.81 * cWidth,y2-y_120]])
 
-    l_lower = np.array([[x1,y1+radius+8], [x1-140,y1-75], [x1-140,y1-200], [x1-130,y1-200], [x1-130,y1-75], [x1,y1]])
-    r_lower = np.array([[x2 ,y2],[x2+130,y2-75], [x2+130,y2-200], [x2+140,y1-200], [x2+140,y2-75], [x2,y2+radius+8]])
+    l_lower = np.array([[x1,y1 + 1.9 * radius], [0.035 * cWidth,y1- 1.2 * y_60], [0.035 * cWidth,y1 - 1.5 * y_120], [0.05 * cWidth,y1 - 1.5 * y_120], [0.05 * cWidth,y1- 1.3 * y_60], [x1,y1]])
+    r_lower = np.array([[x2 ,y1],[0.85 * cWidth,y1- 1.3 * y_60], [0.85 * cWidth,y1 - 1.5 * y_120], [0.865 * cWidth,y1 - 1.5 * y_120], [0.865 * cWidth,y1- 1.2 * y_60], [x2,y1+1.9 * radius]])
     
     pygame.draw.polygon(statics, WHITE, l_triag, 0)
     pygame.draw.polygon(statics, WHITE, r_triag, 0)
