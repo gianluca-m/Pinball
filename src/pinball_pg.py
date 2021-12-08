@@ -539,10 +539,10 @@ class PinballScene:
                         self.handle_ball_border_collision(ball, self.border[16:19], True)
                         for p in self.pills:
                             self.handle_ball_pill_collision(ball, p)
-
+            
             for j in range(i+1, len(self.balls)):
                 self.handle_ball_ball_collision(ball, self.balls[j])
-
+            
         #Game Over Logic
         if(len(self.balls) == 0):
             game_over_logic(self)
@@ -572,6 +572,7 @@ def setup_scene() -> PinballScene:
     pos3 = np.array([cWidth - 20, cHeight * 0.9])
     vel3 = np.array([400.0, 0.0])
     ball3 = Ball(pos3, vel3, radius, mass, restitution)
+
     balls = [ball1, ball2, ball3]
 
     # obstacles
@@ -707,7 +708,7 @@ def draw(pinball_scene: PinballScene):
 
     # Draw Score
     scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, RED)
-    scoreRect = scoreSurface.get_rect(center=((cWidth*0.95) // 2, cHeight*0.03))
+    scoreRect = scoreSurface.get_rect(center=(cWidth*0.45, cHeight*0.03))
 
     
     window.blit(statics, (0, 0))
