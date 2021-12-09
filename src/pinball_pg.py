@@ -272,7 +272,7 @@ class Shooter:
 class Teleporter:
     def __init__(self, pos, dest, radius):
         self.pos = np.copy(pos)
-        self.dest = np.copy(dest)
+        self.dest = dest
         self.radius = radius
 
 class PinballScene:
@@ -369,29 +369,31 @@ class PinballScene:
             # No Collision
             return
 
-        ball.pos[1] = shooter.pos[0][1] - ball.radius
+        
 
         if shooter.is_pressed:
             # We are charging the Shooter so we dont launch (just bounce)
+            ball.pos[1] = shooter.pos[0][1] - ball.radius
             ball.vel[1] = 0.6 * -ball.vel[1]
             return
 
         # Update Velocity in  normal state
         ball.vel[1] = 0.6 * -ball.vel[1]  - shooter.push_vel
+        ball.pos[1] = shooter.pos[0][1] - ball.radius
 
 
-    def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter):
+    def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter, i):
         squared_distance = np.sqrt(((teleporter.pos[0] - ball.pos[0])**2) + ((teleporter.pos[1] - ball.pos[1])**2))
         
         #Not Completely Inside
         if (squared_distance + ball.radius > teleporter.radius):
             return
-
-        ball.vel = [0,0]
-        ball.pos = teleporter.dest
-        
-
         teleporter_sound.play()
+
+        tp_dest = np.copy(teleporter.dest)
+        self.balls[i] = Ball(tp_dest,np.array([0.0,0.0]),ball.radius,ball.mass,ball.restitution)
+        ball = self.balls[i]
+        
         self.score += 10
         
 
@@ -523,16 +525,15 @@ class PinballScene:
                         # SPHERE SECTION
                         self.handle_ball_border_collision(ball, self.border[1:6], True)
                         self.handle_ball_border_collision(ball, self.border[14:18], True)
-                        self.handle_ball_teleporter_collision(ball,self.teleporters)
-                        '''
-                        for s in self.obstacles:
-                            self.handle_ball_circle_obstacle_collision(ball, s)
-                        '''
+                        
+                
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[0])
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[1])
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[2])
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[3])
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[4])
+
+                        self.handle_ball_teleporter_collision(ball,self.teleporters, i)
                     else:
                         # PILL SECTION
                         self.handle_ball_border_collision(ball, self.border[[21,22,0,1,2]], True)
