@@ -3,9 +3,6 @@ import math
 import time
 import pygame
 
-'''
-    adjusted from: https://github.com/matthias-research/pages/blob/master/tenMinutePhysics/04-pinball.html
-'''
 pygame.mixer.init()
 pygame.init()
 pygame.font.init()
@@ -31,7 +28,6 @@ endscreen = pygame.Surface((cWidth,cHeight),flags = pygame.SRCALPHA)
 # Creates two Surfaces (Canvas). Statics has transparent background
 dynamics = pygame.Surface((cWidth, cHeight))
 dynamics.set_colorkey(WHITE)
-
 statics = pygame.Surface((cWidth, cHeight))
 
 # Load Sounds
@@ -63,6 +59,7 @@ shooter_img = pygame.image.load("textures/shooter.png").convert()
 
 # Fonts
 score_font = pygame.font.SysFont('arial bold', 40)
+
 
 # utility functions
 def vector_length(x):
@@ -342,7 +339,7 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (obstacle.push_vel - vel)
 
-        estimate_volume(ball.vel,o_sound)
+        estimate_volume(ball.vel, o_sound)
         o_sound.play()
 
         # update score
@@ -365,7 +362,7 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (pill.push_vel - vel)
 
-        estimate_volume(ball.vel,o_sound)
+        estimate_volume(ball.vel, o_sound)
         o_sound.play()
 
         # update score
@@ -399,8 +396,6 @@ class PinballScene:
         teleporter_sound.play()
 
         tp_dest = np.copy(teleporter.dest)
-        #self.balls[i] = Ball(tp_dest, np.array([0.0, 0.0]), ball.radius, ball.mass, ball.restitution)
-        #ball = self.balls[i]
         ball.pos = tp_dest
         ball.vel = np.array([0.0, 0.0])
         
@@ -525,7 +520,7 @@ class PinballScene:
 
                     if (ball.pos[0] > cWidth/2):
                         # BOTTOM RIGHT
-                        self.handle_ball_flipper_collision(ball,self.flippers[1])
+                        self.handle_ball_flipper_collision(ball, self.flippers[1])
                         self.handle_ball_border_collision(ball, self.border[11:22], True)
                         self.handle_ball_border_collision(ball, self.obstacles[6], False)
                         self.handle_ball_border_collision(ball, self.obstacles[8], False)
@@ -566,10 +561,13 @@ def setup_scene() -> PinballScene:
     global window
     global statics
     statics.fill((0,0,0))
-    statics.blit(bg_img,(0,0))
+    statics.blit(bg_img, (0,0))
 
     # scene borders --> Define set of pixel pairs
-    border = np.array([[cWidth*0.08, 0.0], [0.0, cHeight*0.05], [0.0, cHeight*0.3], [cWidth*0.1,cHeight*0.39], [0.0, cHeight*0.4], [cWidth*0.08, cHeight*0.5] , [0.0, cHeight*0.55], [cWidth*0.05, cHeight*0.6],[0.0, cHeight*0.71], [0.0, cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.6, cHeight], [cWidth*0.9, cHeight*0.9], [cWidth*0.9,cHeight*0.65], [cWidth*0.83, cHeight*0.5], [cWidth*0.86, cHeight*0.4], [cWidth*0.92,cHeight*0.41],[cWidth*0.92,cHeight*0.15], [cWidth*0.95, cHeight*0.15], [cWidth*0.95,cHeight], [cWidth,cHeight], [cWidth, cHeight*0.05], [cWidth*0.92,0.0]])
+    border = np.array([[cWidth*0.08, 0.0], [0.0, cHeight*0.05], [0.0, cHeight*0.3], [cWidth*0.1, cHeight*0.39], [0.0, cHeight*0.4], [cWidth*0.08, cHeight*0.5], 
+                        [0.0, cHeight*0.55], [cWidth*0.05, cHeight*0.6],[0.0, cHeight*0.71], [0.0, cHeight*0.9], [cWidth*0.3,cHeight], [cWidth*0.6, cHeight], 
+                        [cWidth*0.9, cHeight*0.9], [cWidth*0.9, cHeight*0.65], [cWidth*0.83, cHeight*0.5], [cWidth*0.86, cHeight*0.4], [cWidth*0.92, cHeight*0.41],
+                        [cWidth*0.92, cHeight*0.15], [cWidth*0.95, cHeight*0.15], [cWidth*0.95, cHeight], [cWidth, cHeight], [cWidth, cHeight*0.05], [cWidth*0.92, 0.0]])
     pygame.draw.polygon(statics, WHITE ,border, 1)
 
     # balls
@@ -626,10 +624,10 @@ def setup_scene() -> PinballScene:
     # Pills
     pills = []
     p_rad = 0.018 * cWidth
-    p1 = np.array([[cWidth * 0.2, cHeight * 0.06],[cWidth * 0.2, cHeight * 0.14]])
-    p2 = np.array([[cWidth * 0.35, cHeight * 0.08],[cWidth * 0.35,cHeight * 0.16]])
-    p3 = np.array([[cWidth * 0.55, cHeight * 0.08],[cWidth * 0.55,cHeight * 0.16]])
-    p4 = np.array([[cWidth * 0.7, cHeight * 0.06],[cWidth * 0.7,cHeight * 0.14]])
+    p1 = np.array([[cWidth * 0.2, cHeight * 0.06], [cWidth * 0.2, cHeight * 0.14]])
+    p2 = np.array([[cWidth * 0.35, cHeight * 0.08], [cWidth * 0.35,cHeight * 0.16]])
+    p3 = np.array([[cWidth * 0.55, cHeight * 0.08], [cWidth * 0.55,cHeight * 0.16]])
+    p4 = np.array([[cWidth * 0.7, cHeight * 0.06], [cWidth * 0.7,cHeight * 0.14]])
     
     pills.append(PillObstacle(p1, p_rad, 100.0))
     pills.append(PillObstacle(p2, p_rad, 100.0))
@@ -662,8 +660,8 @@ def setup_scene() -> PinballScene:
     y_60 = 0.05 * cHeight
     y_120 = 0.1 * cHeight
     # Triangles
-    l_triag = np.array([[x1-radius ,y1-y_60],[0.09 * cWidth,y1-y_120],[0.09 * cWidth,y1-(2*y_120)]])
-    r_triag = np.array([[x2+radius ,y2-y_60],[0.81*cWidth,y2-(2*y_120)],[0.81 * cWidth,y2-y_120]])
+    l_triag = np.array([[x1-radius, y1-y_60], [0.09 * cWidth, y1-y_120], [0.09 * cWidth, y1-(2*y_120)]])
+    r_triag = np.array([[x2+radius, y2-y_60], [0.81*cWidth, y2-(2*y_120)], [0.81 * cWidth, y2-y_120]])
 
     l_lower = np.array([[x1,y1 + 1.9 * radius], [0.035 * cWidth,y1- 1.2 * y_60], [0.035 * cWidth,y1 - 1.5 * y_120], [0.05 * cWidth,y1 - 1.5 * y_120], [0.05 * cWidth,y1- 1.3 * y_60], [x1,y1]])
     r_lower = np.array([[x2 ,y1],[0.85 * cWidth,y1- 1.3 * y_60], [0.85 * cWidth,y1 - 1.5 * y_120], [0.865 * cWidth,y1 - 1.5 * y_120], [0.865 * cWidth,y1- 1.2 * y_60], [x2,y1+1.9 * radius]])
@@ -725,7 +723,6 @@ def draw(pinball_scene: PinballScene):
     score_surface = score_font.render(f"Score: {pinball_scene.score}", True, RED)
     score_rect = score_surface.get_rect(center=(cWidth * 0.45, cHeight * 0.03))
 
-    
     window.blit(statics, (0, 0))
     window.blit(dynamics, (0, 0))
     window.blit(score_surface, score_rect)
