@@ -7,4 +7,4 @@ Setup conda environment: `conda env create -f pinball.yaml -n pinball`
 Activate environment: `conda activate pinball`
 
 ## Current Layout
-![Current Layout](curr_stup.png)
+![Current Layout](curr_setup.png)

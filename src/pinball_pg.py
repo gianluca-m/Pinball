@@ -56,7 +56,7 @@ bg_img.set_alpha(128)
 obst_img = pygame.image.load("textures/obstacle.png").convert_alpha()
 
 # Load Ball Texture
-ball_img = pygame.image.load("textures/ball.png").convert_alpha()
+ball_img = pygame.image.load("textures/ball3.png").convert_alpha()
 
 # Load Shooter Texture
 shooter_img = pygame.image.load("textures/shooter.png").convert()
