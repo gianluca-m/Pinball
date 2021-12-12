@@ -389,7 +389,7 @@ class PinballScene:
         ball.pos[1] = shooter.pos[0][1] - ball.radius
 
 
-    def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter, i):
+    def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter):
         dist = vector_length(ball.pos - teleporter.pos)
         
         if math.floor(dist + ball.radius) > math.ceil(teleporter.radius):
@@ -498,26 +498,32 @@ class PinballScene:
         for ball in self.balls:
             ball.simulate(self.dt, self.g)
 
-        for i in range(len(self.balls)):
+        i = 0
+        while i < len(self.balls):      
+            # Note: because we are potentially removing balls during the loop, we cannot simply use a for-loop
+            # because the loop counter is not updated to account for the removed elements (even if you do "i = i-1", in the next iteration it will just use the next i from the range sequence)
+            # Therefore, if more than one ball gets removed in the same simulation step, using a for-loop would result in an index-out-of-range error!
+            
             ball = self.balls[i]
+            i += 1
 
-            if(ball.pos[0] >= 0.95 * cWidth):
+            if (ball.pos[0] >= 0.95 * cWidth):
                 # Far Right Side, Shooter Area
                 self.handle_ball_shooter_collision(ball, self.shooters[0])
                 self.handle_ball_border_collision(ball, self.border[17:23], True)
             else:
                 # Normal Play Area
-                if(ball.pos[1] > cHeight/2):
+                if (ball.pos[1] > cHeight/2):
                     # Lower Half
 
-                    if(ball.pos[1] > cHeight + ball.radius):
+                    if (ball.pos[1] > cHeight + ball.radius):
+                        # Ball is out
                         ball_lost_sound.play()
-                        #Ball is out
                         self.balls.remove(ball)
-                        i = i-1
-                        break
+                        i -= 1
+                        continue
 
-                    if(ball.pos[0] > cWidth/2):
+                    if (ball.pos[0] > cWidth/2):
                         # BOTTOM RIGHT
                         self.handle_ball_flipper_collision(ball,self.flippers[1])
                         self.handle_ball_border_collision(ball, self.border[11:22], True)
@@ -531,7 +537,7 @@ class PinballScene:
                         self.handle_ball_border_collision(ball, self.obstacles[7], False)
                 else:
                     # Upper Half
-                    if(ball.pos[1] > 0.185 * cHeight):
+                    if (ball.pos[1] > 0.185 * cHeight):
                         # SPHERE SECTION
                         self.handle_ball_border_collision(ball, self.border[1:6], True)
                         self.handle_ball_border_collision(ball, self.border[14:18], True)
@@ -543,7 +549,7 @@ class PinballScene:
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[3])
                         self.handle_ball_circle_obstacle_collision(ball, self.obstacles[4])
 
-                        self.handle_ball_teleporter_collision(ball,self.teleporters, i)
+                        self.handle_ball_teleporter_collision(ball, self.teleporters)
                     else:
                         # PILL SECTION
                         self.handle_ball_border_collision(ball, self.border[[21,22,0,1,2]], True)
@@ -585,7 +591,7 @@ def setup_scene() -> PinballScene:
     pos4 = np.array([0.7 * cWidth, 0.35 * cHeight])
     vel4 = np.array([400.0, 0.0])
     ball4 = Ball(pos4, vel4, radius, mass, restitution)
-    
+
     balls = [ball1, ball2, ball3, ball4]
 
     # obstacles
