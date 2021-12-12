@@ -62,7 +62,7 @@ ball_img = pygame.image.load("textures/ball.png").convert_alpha()
 shooter_img = pygame.image.load("textures/shooter.png").convert()
 
 # Fonts
-scoreFont = pygame.font.SysFont('arial bold', 40)
+score_font = pygame.font.SysFont('arial bold', 40)
 
 # utility functions
 def vector_length(x):
@@ -89,14 +89,16 @@ def angle_between_vectors(a, b):
     unit_b = b / vector_length(b)
     return np.arccos(np.clip(unit_a.dot(unit_b), -1.0, 1.0))
 
+
 def estimate_volume(vel,sound):
     k = min(5.0, vector_length(vel) / 900)
     sound.set_volume(k)
 
+
 def game_over_logic(scene):
     gameover_sound.play()
 
-    #Fade to Black
+    # Fade to Black
     for i in range(40):
         endscreen.fill((0,0,0,i))
         window.blit(endscreen,(0,0))
@@ -104,32 +106,32 @@ def game_over_logic(scene):
         time.sleep(.1)
 
     # Write the Score we had before loosing
-    scoreSurface = scoreFont.render(f"Score: {scene.score}", True, WHITE)
-    scoreRect = scoreSurface.get_rect(center=(cWidth*0.72, cHeight * 0.55))
+    score_surface = score_font.render(f"Score: {scene.score}", True, WHITE)
+    score_rect = score_surface.get_rect(center=(cWidth * 0.72, cHeight * 0.55))
 
-    endscreen.blit(endscreen_img,(0,0))
-    endscreen.blit(scoreSurface,scoreRect)
-    window.blit(endscreen,(0,0))
+    endscreen.blit(endscreen_img, (0, 0))
+    endscreen.blit(score_surface, score_rect)
+    window.blit(endscreen, (0, 0))
     pygame.display.flip()
     
-    #Wait for Key Input
-
-    while(True):
+    # Wait for Key Input
+    while True:
         for event in pygame.event.get():
-            if (event.type == pygame.QUIT):
+            if event.type == pygame.QUIT:
                 pygame.quit()
                 pygame.mixer.quit()
                 quit()
             
             if event.type == pygame.KEYDOWN:
-                if (event.key == pygame.K_ESCAPE):
+                if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     pygame.mixer.quit()
                     quit()
 
-                if (event.key == pygame.K_r):
+                if event.key == pygame.K_r:
                     restart_sound.play()
                     update(setup_scene())
+
 
 
 class Ball:
@@ -225,11 +227,15 @@ class CircleObstacle:
         self.radius = radius
         self.push_vel = push_vel
 
+
+
 class PillObstacle:
     def __init__(self, pos, radius, push_vel):
         self.pos = np.copy(pos)
         self.radius = radius
         self.push_vel = push_vel
+
+
 
 class Shooter:
     def __init__(self, pos, rest_pos, k, mass, key):
@@ -260,8 +266,6 @@ class Shooter:
                 self.checkout += 1
 
 
-
-
     def activate(self):
         self.is_pressed = True
 
@@ -269,11 +273,15 @@ class Shooter:
     def deactivate(self):
         self.is_pressed = False
 
+
+
 class Teleporter:
     def __init__(self, pos, dest, radius):
         self.pos = np.copy(pos)
         self.dest = dest
         self.radius = radius
+
+
 
 class PinballScene:
     def __init__(self, border, balls, obstacles, shooters, teleporters, pills, flippers, g=np.array([0, 981]), dt=1/120):
@@ -336,8 +344,10 @@ class PinballScene:
 
         estimate_volume(ball.vel,o_sound)
         o_sound.play()
+
         # update score
         self.score += 1
+
 
     def handle_ball_pill_collision(self, ball: Ball, pill: PillObstacle):
         closest = closest_point_on_segment(ball.pos, pill.pos[1], pill.pos[0])
@@ -355,11 +365,10 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (pill.push_vel - vel)
 
-        '''
         estimate_volume(ball.vel,o_sound)
         o_sound.play()
+
         # update score
-        '''
         self.score += 1
 
 
@@ -368,8 +377,6 @@ class PinballScene:
         if ball.pos[1] + ball.radius < shooter.pos[0][1]:
             # No Collision
             return
-
-        
 
         if shooter.is_pressed:
             # We are charging the Shooter so we dont launch (just bounce)
@@ -383,16 +390,19 @@ class PinballScene:
 
 
     def handle_ball_teleporter_collision(self, ball: Ball, teleporter: Teleporter, i):
-        squared_distance = np.sqrt(((teleporter.pos[0] - ball.pos[0])**2) + ((teleporter.pos[1] - ball.pos[1])**2))
+        dist = vector_length(ball.pos - teleporter.pos)
         
-        #Not Completely Inside
-        if (squared_distance + ball.radius > teleporter.radius):
+        if math.floor(dist + ball.radius) > math.ceil(teleporter.radius):
+            # Not Completely Inside
             return
+
         teleporter_sound.play()
 
         tp_dest = np.copy(teleporter.dest)
-        self.balls[i] = Ball(tp_dest,np.array([0.0,0.0]),ball.radius,ball.mass,ball.restitution)
-        ball = self.balls[i]
+        #self.balls[i] = Ball(tp_dest, np.array([0.0, 0.0]), ball.radius, ball.mass, ball.restitution)
+        #ball = self.balls[i]
+        ball.pos = tp_dest
+        ball.vel = np.array([0.0, 0.0])
         
         self.score += 10
         
@@ -544,9 +554,7 @@ class PinballScene:
             for j in range(i+1, len(self.balls)):
                 self.handle_ball_ball_collision(ball, self.balls[j])
             
-        #Game Over Logic
-        if(len(self.balls) == 0):
-            game_over_logic(self)
+
 
 def setup_scene() -> PinballScene:
     global window
@@ -574,7 +582,11 @@ def setup_scene() -> PinballScene:
     vel3 = np.array([400.0, 0.0])
     ball3 = Ball(pos3, vel3, radius, mass, restitution)
 
-    balls = [ball1, ball2, ball3]
+    pos4 = np.array([0.7 * cWidth, 0.35 * cHeight])
+    vel4 = np.array([400.0, 0.0])
+    ball4 = Ball(pos4, vel4, radius, mass, restitution)
+    
+    balls = [ball1, ball2, ball3, ball4]
 
     # obstacles
     r_big = 0.06 * cHeight
@@ -591,20 +603,19 @@ def setup_scene() -> PinballScene:
         dim = 2* c.radius
         ob = pygame.transform.scale(obst_img, (dim,dim))
         statics.blit(ob, (c.pos[0] - c.radius, c.pos[1]-c.radius))
-        #pygame.draw.circle(statics, (176, 224, 230), c.pos, c.radius, 0) #0 = FILL
 
     # shooters
     shooters = []
     fixed_pos = np.array([[cWidth*0.95, cHeight*0.95], [cWidth, cHeight]])
-    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 3000, 1, pygame.K_k))
+    shooters.append(Shooter(fixed_pos, np.copy(fixed_pos[0]), 5000, 1, pygame.K_k))
 
     # Teleporter
-    tp_radi = cWidth * 0.03
+    tp_radius = cWidth * 0.03
     active = np.array([0.89 * cWidth, 0.385 * cHeight])
     passive = np.array([0.11 * cWidth, 0.02 * cHeight])
-    teleporters=(Teleporter(active, passive, tp_radi))
-    pygame.draw.circle(statics, RED, active, tp_radi, 2)
-    pygame.draw.circle(statics, BLUE, passive, tp_radi, 2)
+    teleporters = Teleporter(active, passive, tp_radius)
+    pygame.draw.circle(statics, RED, active, tp_radius, 2)
+    pygame.draw.circle(statics, BLUE, passive, tp_radius, 2)
 
     # Pills
     pills = []
@@ -661,9 +672,6 @@ def setup_scene() -> PinballScene:
     obstacles.append(l_lower)
     obstacles.append(r_lower)
 
-
-    
-
     # Commit Changes on Statics-Surface to window
     window.blit(statics, (0, 0))
 
@@ -708,13 +716,13 @@ def draw(pinball_scene: PinballScene):
         pygame.draw.circle(dynamics, RED, new_coords[5], f.radius, 0)
 
     # Draw Score
-    scoreSurface = scoreFont.render(f"Score: {pinball_scene.score}", True, RED)
-    scoreRect = scoreSurface.get_rect(center=(cWidth*0.45, cHeight*0.03))
+    score_surface = score_font.render(f"Score: {pinball_scene.score}", True, RED)
+    score_rect = score_surface.get_rect(center=(cWidth * 0.45, cHeight * 0.03))
 
     
     window.blit(statics, (0, 0))
     window.blit(dynamics, (0, 0))
-    window.blit(scoreSurface, scoreRect)
+    window.blit(score_surface, score_rect)
 
 
 def update(pinball_scene: PinballScene):
@@ -751,6 +759,10 @@ def update(pinball_scene: PinballScene):
                 for shooter in pinball_scene.shooters:
                     if event.key == shooter.key:
                         shooter.deactivate()
+
+        # Game Over Logic
+        if len(pinball_scene.balls) == 0:
+            game_over_logic(pinball_scene)
 
         pinball_scene.simulate()
         draw(pinball_scene)
