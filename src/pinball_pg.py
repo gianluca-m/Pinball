@@ -101,6 +101,21 @@ def game_over_logic(scene):
         endscreen.fill((0,0,0,i))
         window.blit(endscreen,(0,0))
         pygame.display.flip()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                pygame.mixer.quit()
+                quit()
+            
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    pygame.mixer.quit()
+                    quit()
+
+                if event.key == pygame.K_r:
+                    restart_sound.play()
+                    update(setup_scene())
         time.sleep(.1)
 
     # Write the Score we had before loosing
@@ -556,7 +571,7 @@ class PinballScene:
                         for p in self.pills:
                             self.handle_ball_pill_collision(ball, p)
             
-            for j in range(i+1, len(self.balls)):
+            for j in range(i, len(self.balls)):
                 self.handle_ball_ball_collision(ball, self.balls[j])
             
 
