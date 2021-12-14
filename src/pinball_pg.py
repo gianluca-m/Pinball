@@ -39,6 +39,7 @@ gameover_sound = pygame.mixer.Sound("sounds/gameover.wav")
 ball_lost_sound = pygame.mixer.Sound("sounds/shutdown3.wav")
 teleporter_sound = pygame.mixer.Sound("sounds/hit+start.wav")
 border_sound = pygame.mixer.Sound("sounds/collsion2.wav")
+pill_sound = pygame.mixer.Sound("sounds/collision3.wav")
 
 # Load Endscreen Texture
 endscreen_img = pygame.image.load("textures/endscreen.png").convert()
@@ -378,8 +379,8 @@ class PinballScene:
         vel = ball.vel.dot(dir)
         ball.vel += dir * (pill.push_vel - vel)
 
-        estimate_volume(ball.vel, o_sound)
-        o_sound.play()
+        estimate_volume(ball.vel, pill_sound)
+        pill_sound.play()
 
         # update score
         self.score += 1
