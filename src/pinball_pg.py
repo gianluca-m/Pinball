@@ -38,6 +38,7 @@ o_sound = pygame.mixer.Sound("sounds/obstacle_collision.wav")
 gameover_sound = pygame.mixer.Sound("sounds/gameover.wav")
 ball_lost_sound = pygame.mixer.Sound("sounds/shutdown3.wav")
 teleporter_sound = pygame.mixer.Sound("sounds/hit+start.wav")
+border_sound = pygame.mixer.Sound("sounds/collsion2.wav")
 
 # Load Endscreen Texture
 endscreen_img = pygame.image.load("textures/endscreen.png").convert()
@@ -88,7 +89,7 @@ def angle_between_vectors(a, b):
 
 
 def estimate_volume(vel,sound):
-    k = min(5.0, vector_length(vel) / 900)
+    k = min(5.0, vector_length(vel) / 1000)
     sound.set_volume(k)
 
 
@@ -483,7 +484,10 @@ class PinballScene:
         
         # update velocity
         ball.vel -= (2.0 - ball.restitution) * (ball.vel.dot(unit_dir)) * unit_dir  # https://math.stackexchange.com/a/13266
-
+        
+        if(uncon):
+            estimate_volume(ball.vel, border_sound)
+            border_sound.play()
 
     def simulate(self):    
         self.flippers[0].simulate(self.dt)
