@@ -606,11 +606,12 @@ def setup_scene() -> PinballScene:
     vel3 = np.array([400.0, 0.0])
     ball3 = Ball(pos3, vel3, radius, mass, restitution)
 
-    pos4 = np.array([0.7 * cWidth, 0.35 * cHeight])
-    vel4 = np.array([400.0, 0.0])
+    pos4 = np.array([cWidth - 20, 0.8 * cHeight])
+    vel4 = np.array([0.0, 0.0])
     ball4 = Ball(pos4, vel4, radius, mass, restitution)
 
     balls = [ball1, ball2, ball3, ball4]
+    
 
     # obstacles
     r_big = 0.06 * cHeight
